@@ -1,0 +1,3 @@
+facultyCode,name,email,departmentCode,deptMonitoringEnabled
+FAC001,Dr Ravi Kumar,ravi@kongu.edu,CSE,true
+FAC002,Prof Lakshmi S,lakshmi@kongu.edu,IT,false

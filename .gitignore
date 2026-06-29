@@ -1,0 +1,26 @@
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Java
+target/
+.build-test/
+.build/
+build-output/
+
+# Node and Next.js
+node_modules/
+.next/
+out/
+dist/
+
+# Environment
+.env
+.env.local
+!.env.local.example
+
+# Logs
+*.log

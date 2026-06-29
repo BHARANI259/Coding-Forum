@@ -1,0 +1,3 @@
+registerNumber,name,email,departmentCode,year,section,placementWilling
+22CSR001,Arun Kumar,22csr001@kongu.edu,CSE,3,A,true
+22ITR002,Meena S,22itr002@kongu.edu,IT,3,B,false
