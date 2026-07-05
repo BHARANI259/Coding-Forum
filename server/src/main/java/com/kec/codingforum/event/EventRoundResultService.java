@@ -2,6 +2,7 @@ package com.kec.codingforum.event;
 
 import com.kec.codingforum.event.dto.RoundResultDto;
 import com.kec.codingforum.registration.RegistrationRepository;
+import com.kec.codingforum.registration.Registration;
 import com.kec.codingforum.result.ResultService;
 import com.kec.codingforum.team.Team;
 import com.kec.codingforum.team.TeamRepository;
@@ -22,7 +23,7 @@ import java.util.Set;
 public class EventRoundResultService {
 
     private static final Set<String> NON_FINAL_STATUSES = Set.of("SELECTED", "DISQUALIFIED");
-    private static final Set<String> FINAL_STATUSES = Set.of("WINNER", "RUNNER_UP", "PARTICIPANT", "DISQUALIFIED");
+    private static final Set<String> FINAL_STATUSES = Set.of("WINNER", "RUNNER_UP", "SECOND_RUNNER_UP", "PARTICIPANT", "DISQUALIFIED");
 
     private final EventRoundResultRepository roundResults;
     private final EventRoundRepository rounds;
@@ -63,6 +64,7 @@ public class EventRoundResultService {
     public RoundResultDto saveTeam(Long eventId, Long roundId, Long teamId, String status, Long declaredByUserId) {
         EventRound round = findRound(eventId, roundId);
         Event event = round.getEvent();
+        assertRoundEditable(round);
         if (!"TEAM".equals(event.getEventType())) {
             throw new IllegalArgumentException("Team round result is allowed only for team events.");
         }
@@ -84,9 +86,6 @@ public class EventRoundResultService {
         result.setDeclaredBy(declaredBy);
         result.setDeclaredAt(LocalDateTime.now());
         EventRoundResult saved = roundResults.save(result);
-        if (round.isFinalRound()) {
-            resultService.declareTeamResult(eventId, teamId, normalized, declaredByUserId);
-        }
         return toDto(saved);
     }
 
@@ -94,6 +93,7 @@ public class EventRoundResultService {
     public RoundResultDto saveStudent(Long eventId, Long roundId, Long studentId, String status, Long declaredByUserId) {
         EventRound round = findRound(eventId, roundId);
         Event event = round.getEvent();
+        assertRoundEditable(round);
         if (!"INDIVIDUAL".equals(event.getEventType())) {
             throw new IllegalArgumentException("Student round result is allowed only for individual events.");
         }
@@ -112,10 +112,70 @@ public class EventRoundResultService {
         result.setDeclaredBy(declaredBy);
         result.setDeclaredAt(LocalDateTime.now());
         EventRoundResult saved = roundResults.save(result);
-        if (round.isFinalRound()) {
-            resultService.declareIndividualResult(eventId, studentId, normalized, declaredByUserId);
-        }
         return toDto(saved);
+    }
+
+    @Transactional
+    public void publishRoundResult(Long eventId, Long roundId, Long userId) {
+        EventRound round = findRound(eventId, roundId);
+        Event event = round.getEvent();
+        if (round.isFinalRound()) {
+            throw new IllegalArgumentException("Use Publish Final Result for the final round.");
+        }
+        if (round.isResultPublished()) {
+            throw new IllegalArgumentException("This round result has already been published.");
+        }
+        if (event.isResultsPublished()) {
+            throw new IllegalArgumentException("Final results have already been published.");
+        }
+        if ("TEAM".equals(event.getEventType())) {
+            publishTeamShortlist(event, round, userId);
+        } else {
+            publishStudentShortlist(event, round, userId);
+        }
+        markRoundPublished(round, userId);
+    }
+
+    @Transactional
+    public void publishFinalResult(Long eventId, Long roundId, Long userId) {
+        EventRound round = findRound(eventId, roundId);
+        Event event = round.getEvent();
+        if (!round.isFinalRound()) {
+            throw new IllegalArgumentException("Use Publish Round Result for non-final rounds.");
+        }
+        if (round.isResultPublished() || event.isResultsPublished()) {
+            throw new IllegalArgumentException("Final results have already been published.");
+        }
+        List<EventRoundResult> drafts = roundResults.findByEventIdAndRoundIdOrderByDeclaredAtDesc(eventId, roundId);
+        if (drafts.isEmpty()) {
+            throw new IllegalArgumentException("At least one final result is required before publishing.");
+        }
+        for (EventRoundResult draft : drafts) {
+            if (draft.getTeam() != null) {
+                resultService.declareTeamResult(eventId, draft.getTeam().getId(), draft.getStatus(), userId);
+            } else {
+                resultService.declareIndividualResult(eventId, draft.getStudent().getId(), draft.getStatus(), userId);
+            }
+        }
+        markRoundPublished(round, userId);
+        resultService.publishResults(eventId);
+    }
+
+    @Transactional(readOnly = true)
+    public RoundResultDto getStudentRoundResult(Long eventId, Long roundId, Long studentId) {
+        EventRound round = findRound(eventId, roundId);
+        if (!round.isResultPublished()) {
+            return null;
+        }
+        if ("INDIVIDUAL".equals(round.getEvent().getEventType())) {
+            return roundResults.findByRoundIdAndStudentId(roundId, studentId).map(this::toDto).orElse(null);
+        }
+        return registrations.findByStudentIdOrderByRegisteredAtDesc(studentId).stream()
+                .filter(registration -> registration.getEvent().getId().equals(eventId) && registration.getTeam() != null && "REGISTERED".equals(registration.getStatus()))
+                .findFirst()
+                .flatMap(registration -> roundResults.findByRoundIdAndTeamId(roundId, registration.getTeam().getId()))
+                .map(this::toDto)
+                .orElse(null);
     }
 
     @Transactional(readOnly = true)
@@ -127,12 +187,136 @@ public class EventRoundResultService {
     private String validStatus(EventRound round, String status) {
         String normalized = status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
         Set<String> allowed = round.isFinalRound() ? FINAL_STATUSES : NON_FINAL_STATUSES;
+        if (!round.isFinalRound() && "SELECTED".equals(normalized)) {
+            normalized = "QUALIFIED";
+        }
+        if (!round.isFinalRound()) {
+            allowed = Set.of("QUALIFIED", "DISQUALIFIED");
+        }
         if (!allowed.contains(normalized)) {
             throw new IllegalArgumentException(round.isFinalRound()
-                    ? "Final round status must be WINNER, RUNNER_UP, PARTICIPANT, or DISQUALIFIED."
-                    : "Non-final round status must be SELECTED or DISQUALIFIED.");
+                    ? "Final round status must be WINNER, RUNNER_UP, SECOND_RUNNER_UP, PARTICIPANT, or DISQUALIFIED."
+                    : "Non-final round status must be QUALIFIED or DISQUALIFIED.");
         }
         return normalized;
+    }
+
+    private void assertRoundEditable(EventRound round) {
+        if (round.isResultPublished()) {
+            throw new IllegalArgumentException("This round result has been published. Editing is disabled.");
+        }
+        Event event = round.getEvent();
+        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus())) {
+            throw new IllegalArgumentException("Final results have been published. Event is completed. Editing is disabled.");
+        }
+    }
+
+    private void publishTeamShortlist(Event event, EventRound round, Long userId) {
+        User user = users.findById(userId).orElseThrow(() -> new IllegalArgumentException("Publishing user not found."));
+        List<Team> participatingTeams = participatingTeams(event, round);
+        if (participatingTeams.isEmpty()) {
+            throw new IllegalArgumentException("No participants found for this round.");
+        }
+        for (Team team : participatingTeams) {
+            EventRoundResult result = roundResults.findByRoundIdAndTeamId(round.getId(), team.getId()).orElseGet(EventRoundResult::new);
+            result.setEvent(event);
+            result.setRound(round);
+            result.setTeam(team);
+            result.setStudent(null);
+            result.setStatus("DISQUALIFIED".equals(result.getStatus()) ? "DISQUALIFIED" : "QUALIFIED");
+            result.setDeclaredBy(user);
+            result.setDeclaredAt(LocalDateTime.now());
+            roundResults.save(result);
+        }
+        createNextRoundRows(event, round, user);
+    }
+
+    private void publishStudentShortlist(Event event, EventRound round, Long userId) {
+        User user = users.findById(userId).orElseThrow(() -> new IllegalArgumentException("Publishing user not found."));
+        List<Student> participatingStudents = participatingStudents(event, round);
+        if (participatingStudents.isEmpty()) {
+            throw new IllegalArgumentException("No participants found for this round.");
+        }
+        participatingStudents.forEach(student -> {
+            EventRoundResult result = roundResults.findByRoundIdAndStudentId(round.getId(), student.getId()).orElseGet(EventRoundResult::new);
+            result.setEvent(event);
+            result.setRound(round);
+            result.setTeam(null);
+            result.setStudent(student);
+            result.setStatus("DISQUALIFIED".equals(result.getStatus()) ? "DISQUALIFIED" : "QUALIFIED");
+            result.setDeclaredBy(user);
+            result.setDeclaredAt(LocalDateTime.now());
+            roundResults.save(result);
+        });
+        createNextRoundRows(event, round, user);
+    }
+
+    private List<Team> participatingTeams(Event event, EventRound round) {
+        if (isFirstRound(event, round)) {
+            return registrations.findByEventIdAndStatus(event.getId(), "REGISTERED").stream()
+                    .map(Registration::getTeam)
+                    .filter(team -> team != null)
+                    .distinct()
+                    .toList();
+        }
+        return roundResults.findByRoundId(round.getId()).stream()
+                .map(EventRoundResult::getTeam)
+                .filter(team -> team != null)
+                .distinct()
+                .toList();
+    }
+
+    private List<Student> participatingStudents(Event event, EventRound round) {
+        if (isFirstRound(event, round)) {
+            return registrations.findByEventIdAndStatus(event.getId(), "REGISTERED").stream()
+                    .map(Registration::getStudent)
+                    .distinct()
+                    .toList();
+        }
+        return roundResults.findByRoundId(round.getId()).stream()
+                .map(EventRoundResult::getStudent)
+                .filter(student -> student != null)
+                .distinct()
+                .toList();
+    }
+
+    private boolean isFirstRound(Event event, EventRound round) {
+        return rounds.findByEventIdOrderByRoundOrderAsc(event.getId()).stream()
+                .noneMatch(item -> item.getRoundOrder() < round.getRoundOrder());
+    }
+
+    private void createNextRoundRows(Event event, EventRound round, User user) {
+        EventRound nextRound = rounds.findByEventIdOrderByRoundOrderAsc(event.getId()).stream()
+                .filter(item -> item.getRoundOrder() > round.getRoundOrder())
+                .findFirst()
+                .orElse(null);
+        if (nextRound == null) {
+            return;
+        }
+        roundResults.findByRoundId(round.getId()).stream()
+                .filter(result -> "QUALIFIED".equals(result.getStatus()))
+                .forEach(result -> {
+                    EventRoundResult next = result.getTeam() != null
+                            ? roundResults.findByRoundIdAndTeamId(nextRound.getId(), result.getTeam().getId()).orElseGet(EventRoundResult::new)
+                            : roundResults.findByRoundIdAndStudentId(nextRound.getId(), result.getStudent().getId()).orElseGet(EventRoundResult::new);
+                    next.setEvent(event);
+                    next.setRound(nextRound);
+                    next.setTeam(result.getTeam());
+                    next.setStudent(result.getStudent());
+                    next.setStatus("QUALIFIED");
+                    next.setDeclaredBy(user);
+                    next.setDeclaredAt(LocalDateTime.now());
+                    roundResults.save(next);
+                });
+    }
+
+    private void markRoundPublished(EventRound round, Long userId) {
+        User user = users.findById(userId).orElseThrow(() -> new IllegalArgumentException("Publishing user not found."));
+        round.setStatus("COMPLETED");
+        round.setResultPublished(true);
+        round.setResultPublishedAt(LocalDateTime.now());
+        round.setPublishedBy(user);
+        round.setUpdatedAt(LocalDateTime.now());
     }
 
     private EventRound findRound(Long eventId, Long roundId) {

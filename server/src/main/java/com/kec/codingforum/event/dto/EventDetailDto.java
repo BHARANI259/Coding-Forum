@@ -33,6 +33,11 @@ public record EventDetailDto(
         long roundsCount,
         long problemStatementCount,
         boolean resultsPublished,
-        LocalDateTime resultsPublishedAt
+        LocalDateTime resultsPublishedAt,
+        String posterImageUrl,
+        String posterOriginalName,
+        String posterContentType,
+        Long posterSizeBytes,
+        LocalDateTime posterUploadedAt
 ) {
 }

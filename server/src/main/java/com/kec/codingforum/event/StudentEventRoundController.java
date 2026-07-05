@@ -1,6 +1,7 @@
 package com.kec.codingforum.event;
 
 import com.kec.codingforum.event.dto.EventRoundDto;
+import com.kec.codingforum.event.dto.RoundResultDto;
 import com.kec.codingforum.security.SecurityUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,13 +17,20 @@ import java.util.List;
 public class StudentEventRoundController {
 
     private final EventRoundService service;
+    private final EventRoundResultService roundResultService;
 
-    public StudentEventRoundController(EventRoundService service) {
+    public StudentEventRoundController(EventRoundService service, EventRoundResultService roundResultService) {
         this.service = service;
+        this.roundResultService = roundResultService;
     }
 
     @GetMapping
     public List<EventRoundDto> list(@PathVariable Long eventId) {
         return service.studentList(eventId, SecurityUtils.getCurrentStudentId());
+    }
+
+    @GetMapping("/{roundId}/result")
+    public RoundResultDto result(@PathVariable Long eventId, @PathVariable Long roundId) {
+        return roundResultService.getStudentRoundResult(eventId, roundId, SecurityUtils.getCurrentStudentId());
     }
 }

@@ -6,9 +6,9 @@ import AppShell from "@/components/layout/AppShell";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import BackButton from "@/components/ui/BackButton";
+import EventPosterPreview from "@/components/events/EventPosterPreview";
 import { getFacultyEvents, type EventItem } from "@/lib/api";
 
 export default function FacultyEventsPage() {
@@ -34,19 +34,24 @@ export default function FacultyEventsPage() {
       <PageHeader title="Assigned Events" subtitle="Events assigned to you by the SuperAdmin." actions={<BackButton fallbackHref="/faculty/dashboard" />} />
       {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       {loading ? <Card>Loading assigned events...</Card> : (
-        <DataTable
-          headers={["Title", "Category", "Type", "Status", "Registration", "Start", "Action"]}
-          rows={events.map((event) => [
-            event.title,
-            event.category?.name ?? "-",
-            <Badge key="type" variant="purple">{event.eventType}</Badge>,
-            event.status,
-            event.registrationOpen ? "Open" : "Closed",
-            event.startDatetime ? new Date(event.startDatetime).toLocaleString() : "-",
-            <Link key="view" href={`/faculty/events/${event.id}`}><Button type="button" variant="secondary">View</Button></Link>
-          ])}
-          emptyMessage="No assigned events found."
-        />
+        <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
+          {events.map((event) => (
+            <Card key={event.id} className="overflow-hidden p-0">
+              <EventPosterPreview posterImageUrl={event.posterImageUrl} title={event.title} className="aspect-video rounded-b-none border-0" />
+              <div className="p-5">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="purple">{event.category?.name ?? "Uncategorized"}</Badge>
+                  <Badge variant="info">{event.eventType}</Badge>
+                  <Badge variant={event.registrationOpen ? "success" : "warning"}>{event.registrationOpen ? "Open" : "Closed"}</Badge>
+                </div>
+                <h2 className="mt-3 text-lg font-bold text-kec-text">{event.title}</h2>
+                <p className="mt-2 text-sm text-kec-secondary">{event.startDatetime ? new Date(event.startDatetime).toLocaleString() : "Date not set"}</p>
+                <Link className="mt-5 inline-flex" href={`/faculty/events/${event.id}`}><Button type="button" variant="secondary">View</Button></Link>
+              </div>
+            </Card>
+          ))}
+          {!events.length ? <Card>No assigned events found.</Card> : null}
+        </div>
       )}
     </AppShell>
   );

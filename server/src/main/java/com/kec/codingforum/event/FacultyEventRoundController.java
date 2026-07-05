@@ -24,9 +24,11 @@ import java.util.List;
 public class FacultyEventRoundController {
 
     private final EventRoundService service;
+    private final EventRoundResultService roundResultService;
 
-    public FacultyEventRoundController(EventRoundService service) {
+    public FacultyEventRoundController(EventRoundService service, EventRoundResultService roundResultService) {
         this.service = service;
+        this.roundResultService = roundResultService;
     }
 
     @GetMapping
@@ -47,5 +49,17 @@ public class FacultyEventRoundController {
     @PatchMapping("/{roundId}/status")
     public EventRoundDto status(@PathVariable Long eventId, @PathVariable Long roundId, @RequestBody UpdateRoundStatusRequest request) {
         return service.facultyUpdateStatus(eventId, SecurityUtils.getCurrentFacultyId(), roundId, request.status());
+    }
+
+    @PostMapping("/{roundId}/publish-round-result")
+    public void publishRoundResult(@PathVariable Long eventId, @PathVariable Long roundId) {
+        roundResultService.requireAssigned(eventId, SecurityUtils.getCurrentFacultyId());
+        roundResultService.publishRoundResult(eventId, roundId, SecurityUtils.getCurrentUserId());
+    }
+
+    @PostMapping("/{roundId}/publish-final-result")
+    public void publishFinalResult(@PathVariable Long eventId, @PathVariable Long roundId) {
+        roundResultService.requireAssigned(eventId, SecurityUtils.getCurrentFacultyId());
+        roundResultService.publishFinalResult(eventId, roundId, SecurityUtils.getCurrentUserId());
     }
 }

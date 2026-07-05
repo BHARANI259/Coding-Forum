@@ -49,7 +49,12 @@ final class EventMapper {
                 new TreeSet<>(event.getAllowedTechnicalAreas()),
                 roundsCount,
                 problemStatementCount,
-                event.isResultsPublished()
+                event.isResultsPublished(),
+                event.getPosterImageUrl(),
+                event.getPosterOriginalName(),
+                event.getPosterContentType(),
+                event.getPosterSizeBytes(),
+                event.getPosterUploadedAt()
         );
     }
 
@@ -83,7 +88,12 @@ final class EventMapper {
                 roundsCount,
                 problemStatementCount,
                 event.isResultsPublished(),
-                event.getResultsPublishedAt()
+                event.getResultsPublishedAt(),
+                event.getPosterImageUrl(),
+                event.getPosterOriginalName(),
+                event.getPosterContentType(),
+                event.getPosterSizeBytes(),
+                event.getPosterUploadedAt()
         );
     }
 

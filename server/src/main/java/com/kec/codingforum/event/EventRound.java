@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.kec.codingforum.user.User;
 
 import java.time.LocalDateTime;
 
@@ -45,6 +46,16 @@ public class EventRound {
 
     @Column(name = "scheduled_at")
     private LocalDateTime scheduledAt;
+
+    @Column(name = "result_published", nullable = false)
+    private boolean resultPublished = false;
+
+    @Column(name = "result_published_at")
+    private LocalDateTime resultPublishedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "published_by")
+    private User publishedBy;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();

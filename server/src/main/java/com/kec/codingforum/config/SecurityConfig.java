@@ -30,6 +30,7 @@ public class SecurityConfig {
                                 "/api/auth/student/login",
                                 "/api/auth/faculty/login",
                                 "/api/auth/admin/login",
+                                "/api/public/event-posters/**",
                                 "/ws"
                         ).permitAll()
                         .anyRequest().authenticated()

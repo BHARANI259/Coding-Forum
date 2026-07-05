@@ -72,6 +72,21 @@ public class Event {
     @Column(name = "results_published_at")
     private LocalDateTime resultsPublishedAt;
 
+    @Column(name = "poster_image_url")
+    private String posterImageUrl;
+
+    @Column(name = "poster_original_name")
+    private String posterOriginalName;
+
+    @Column(name = "poster_content_type")
+    private String posterContentType;
+
+    @Column(name = "poster_size_bytes")
+    private Long posterSizeBytes;
+
+    @Column(name = "poster_uploaded_at")
+    private LocalDateTime posterUploadedAt;
+
     @ManyToOne
     @JoinColumn(name = "created_by")
     private User createdBy;

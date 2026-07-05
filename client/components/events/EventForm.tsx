@@ -6,8 +6,10 @@ import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
+import EventPosterUpload from "@/components/events/EventPosterUpload";
 import {
   createEvent,
+  createProblemStatement,
   getDepartments,
   getEventCategories,
   getFaculty,
@@ -16,8 +18,10 @@ import {
   type EventDetail,
   type EventPayload,
   type EventCategory,
-  type Faculty
+  type Faculty,
+  type ProblemStatementLink
 } from "@/lib/api";
+import { removeEventPoster, uploadEventPoster } from "@/lib/api/adminEventPosters";
 
 type EventFormProps = {
   mode: "create" | "edit";
@@ -46,6 +50,13 @@ type FormState = {
   allowedSections: string;
   allowedTechnicalAreas: string[];
   inchargeFacultyIds: number[];
+};
+
+type ProblemDraft = {
+  title: string;
+  description: string;
+  active: boolean;
+  links: ProblemStatementLink[];
 };
 
 const initialState: FormState = {
@@ -78,8 +89,11 @@ export default function EventForm({ mode, event }: EventFormProps) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [form, setForm] = useState<FormState>(() => event ? fromEvent(event) : initialState);
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [problemDrafts, setProblemDrafts] = useState<ProblemDraft[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [removingPoster, setRemovingPoster] = useState(false);
 
   useEffect(() => {
     async function loadOptions() {
@@ -106,11 +120,48 @@ export default function EventForm({ mode, event }: EventFormProps) {
     try {
       const payload = toPayload(form);
       const saved = mode === "create" ? await createEvent(payload) : await updateEvent(event?.id ?? 0, payload);
+      if (posterFile) {
+        await uploadEventPoster(saved.id, posterFile);
+      }
+      for (const draft of problemDrafts.filter((item) => item.title.trim() && item.description.trim())) {
+        const links = draft.links
+          .map((link, index) => ({
+            id: null,
+            label: link.label?.trim() || null,
+            url: link.url.trim(),
+            displayOrder: index + 1
+          }))
+          .filter((link) => link.url);
+        await createProblemStatement(saved.id, {
+          title: draft.title,
+          description: draft.description,
+          active: draft.active,
+          referenceLink: links[0]?.url ?? "",
+          links
+        });
+      }
       router.push(`/admin/events/${saved.id}`);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to save event.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleRemovePoster() {
+    if (!event?.id || !window.confirm("Remove this event poster?")) {
+      return;
+    }
+    setRemovingPoster(true);
+    setError("");
+    try {
+      await removeEventPoster(event.id);
+      router.refresh();
+      window.location.reload();
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Unable to remove poster.");
+    } finally {
+      setRemovingPoster(false);
     }
   }
 
@@ -126,6 +177,36 @@ export default function EventForm({ mode, event }: EventFormProps) {
       const list = current[listName];
       return { ...current, [listName]: list.includes(value) ? list.filter((item) => item !== value) : [...list, value] };
     });
+  }
+
+  function addProblemDraft() {
+    setProblemDrafts((current) => [...current, { title: "", description: "", active: true, links: [] }]);
+  }
+
+  function updateProblemDraft(index: number, patch: Partial<ProblemDraft>) {
+    setProblemDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
+  }
+
+  function removeProblemDraft(index: number) {
+    setProblemDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function addProblemDraftLink(index: number) {
+    setProblemDrafts((current) => current.map((item, itemIndex) => itemIndex === index
+      ? { ...item, links: [...item.links, { id: null, label: "", url: "", displayOrder: item.links.length + 1 }] }
+      : item));
+  }
+
+  function updateProblemDraftLink(problemIndex: number, linkIndex: number, patch: Partial<ProblemStatementLink>) {
+    setProblemDrafts((current) => current.map((item, itemIndex) => itemIndex === problemIndex
+      ? { ...item, links: item.links.map((link, index) => index === linkIndex ? { ...link, ...patch } : link) }
+      : item));
+  }
+
+  function removeProblemDraftLink(problemIndex: number, linkIndex: number) {
+    setProblemDrafts((current) => current.map((item, itemIndex) => itemIndex === problemIndex
+      ? { ...item, links: item.links.filter((_, index) => index !== linkIndex) }
+      : item));
   }
 
   return (
@@ -150,6 +231,72 @@ export default function EventForm({ mode, event }: EventFormProps) {
           <span className="text-sm font-semibold text-kec-text">Description</span>
           <textarea className="mt-2 min-h-28 w-full rounded-lg border border-kec-border px-3 py-2 text-sm outline-none focus:border-kec-purple focus:ring-4 focus:ring-kec-purple/15" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </label>
+      </Card>
+
+      <Card>
+        <EventPosterUpload
+          event={event}
+          selectedFile={posterFile}
+          onFileChange={setPosterFile}
+          onRemove={mode === "edit" ? () => void handleRemovePoster() : undefined}
+          removing={removingPoster}
+          disabled={saving}
+        />
+      </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-kec-text">Problem Statements</h2>
+            <p className="mt-1 text-sm text-kec-secondary">
+              Add problem statements now, or manage them later from the event detail page.
+            </p>
+          </div>
+          <Button type="button" variant="secondary" onClick={addProblemDraft}>Add Problem Statement</Button>
+        </div>
+        {mode === "edit" && event ? (
+          <p className="mt-3 rounded-lg border border-kec-border bg-slate-50 px-3 py-2 text-sm text-kec-secondary">
+            Existing problem statements are edited from the event detail page. New entries added here will be appended when you update the event.
+          </p>
+        ) : null}
+        <div className="mt-4 space-y-4">
+          {problemDrafts.map((draft, problemIndex) => (
+            <div key={problemIndex} className="rounded-xl border border-kec-border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-sm font-bold text-kec-text">Problem Statement {problemIndex + 1}</h3>
+                <Button type="button" variant="ghost" onClick={() => removeProblemDraft(problemIndex)}>Remove</Button>
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <Input label="Title" value={draft.title} onChange={(event) => updateProblemDraft(problemIndex, { title: event.target.value })} />
+                <label className="flex items-end gap-2 pb-3 text-sm font-semibold text-kec-text">
+                  <input type="checkbox" checked={draft.active} onChange={(event) => updateProblemDraft(problemIndex, { active: event.target.checked })} />
+                  Active
+                </label>
+              </div>
+              <label className="mt-3 block">
+                <span className="text-sm font-semibold text-kec-text">Description</span>
+                <textarea className="mt-2 min-h-20 w-full rounded-lg border border-kec-border px-3 py-2 text-sm outline-none focus:border-kec-purple focus:ring-4 focus:ring-kec-purple/15" value={draft.description} onChange={(event) => updateProblemDraft(problemIndex, { description: event.target.value })} />
+              </label>
+              <div className="mt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-kec-text">Reference Links</p>
+                  <Button type="button" variant="secondary" onClick={() => addProblemDraftLink(problemIndex)}>Add Link</Button>
+                </div>
+                <div className="mt-3 space-y-3">
+                  {draft.links.map((link, linkIndex) => (
+                    <div key={linkIndex} className="grid gap-3 md:grid-cols-[1fr_2fr_auto]">
+                      <Input label="Label" value={link.label ?? ""} onChange={(event) => updateProblemDraftLink(problemIndex, linkIndex, { label: event.target.value })} />
+                      <Input label="URL" type="url" value={link.url} onChange={(event) => updateProblemDraftLink(problemIndex, linkIndex, { url: event.target.value })} />
+                      <Button className="self-end" type="button" variant="ghost" onClick={() => removeProblemDraftLink(problemIndex, linkIndex)}>Remove</Button>
+                    </div>
+                  ))}
+                  {!draft.links.length ? <p className="text-sm text-kec-muted">No links added. Links are optional.</p> : null}
+                </div>
+              </div>
+            </div>
+          ))}
+          {!problemDrafts.length ? <p className="text-sm text-kec-secondary">No problem statements added yet.</p> : null}
+        </div>
       </Card>
 
       <Card>
@@ -195,6 +342,20 @@ export default function EventForm({ mode, event }: EventFormProps) {
 
       <Card>
         <h2 className="text-base font-bold text-kec-text">Event Incharges</h2>
+        {form.inchargeFacultyIds.length ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {form.inchargeFacultyIds.map((id) => {
+              const member = faculty.find((item) => item.id === id);
+              return (
+                <span key={id} className="rounded-full bg-kec-purple/10 px-3 py-1 text-xs font-semibold text-kec-purple">
+                  {member ? member.name : `Faculty ${id}`}
+                </span>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-kec-secondary">No faculty selected yet. Detailed primary/responsibility management is available from Event Incharges after saving.</p>
+        )}
         <div className="mt-4">
           <Checklist title="Faculty Incharges" items={faculty.map((member) => ({ id: member.id, label: `${member.name} (${member.email})` }))} selected={form.inchargeFacultyIds} onToggle={(id) => toggleNumber("inchargeFacultyIds", id)} emptyLabel="No faculty found." />
         </div>

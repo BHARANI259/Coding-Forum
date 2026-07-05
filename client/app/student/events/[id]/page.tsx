@@ -19,6 +19,7 @@ import {
   getMyTeams,
   getStudentEvent,
   getStudentProblemStatements,
+  getStudentRoundResult,
   getStudentRounds,
   joinTeamByCode,
   registerIndividual,
@@ -26,6 +27,7 @@ import {
   type EventDetail,
   type EventRound,
   type ProblemStatement,
+  type RoundResult,
   type StudentResult,
   type TeamDetail
 } from "@/lib/api";
@@ -35,6 +37,7 @@ export default function StudentEventDetailPage() {
   const eventId = Number(params.id);
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [rounds, setRounds] = useState<EventRound[]>([]);
+  const [roundProgress, setRoundProgress] = useState<Record<number, RoundResult | null>>({});
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [myResult, setMyResult] = useState<StudentResult | null>(null);
   const [teams, setTeams] = useState<TeamDetail[]>([]);
@@ -57,6 +60,17 @@ export default function StudentEventDetailPage() {
       setRounds(roundData);
       setProblemStatements(problemData);
       setTeams(teamData.filter((team) => team.eventId === eventId));
+      const progressEntries = await Promise.all(roundData.map(async (round) => {
+        if (!round.resultPublished) {
+          return [round.id, null] as const;
+        }
+        try {
+          return [round.id, await getStudentRoundResult(eventId, round.id)] as const;
+        } catch {
+          return [round.id, null] as const;
+        }
+      }));
+      setRoundProgress(Object.fromEntries(progressEntries));
       try {
         setMyResult(await getMyEventResult(eventId));
       } catch {
@@ -75,10 +89,22 @@ export default function StudentEventDetailPage() {
     return selectedProblemId ? Number(selectedProblemId) : null;
   }
 
+  function requireProblemSelection() {
+    if (problemStatements.length && !selectedProblemId) {
+      setError("Please select a problem statement before registering.");
+      return false;
+    }
+    return true;
+  }
+
   async function handleIndividualRegister() {
     setSaving(true);
     setError("");
     setSuccess("");
+    if (!requireProblemSelection()) {
+      setSaving(false);
+      return;
+    }
     try {
       await registerIndividual(eventId, selectedProblemStatementId());
       setSuccess("Registration completed successfully.");
@@ -94,6 +120,10 @@ export default function StudentEventDetailPage() {
     setSaving(true);
     setError("");
     setSuccess("");
+    if (!requireProblemSelection()) {
+      setSaving(false);
+      return;
+    }
     try {
       const team = await createTeam(eventId, { teamName });
       setTeamName("");
@@ -149,8 +179,16 @@ export default function StudentEventDetailPage() {
           <Card>
             <h2 className="text-base font-bold text-kec-text">Rounds</h2>
             <DataTable
-              headers={["Order", "Round", "Final", "Status", "Schedule"]}
-              rows={rounds.map((round) => [round.roundOrder, round.roundName, round.finalRound ? "Yes" : "No", round.status, round.scheduledAt ? new Date(round.scheduledAt).toLocaleString() : "-"])}
+              headers={["Order", "Round", "Final", "Status", "Published", "My Progress", "Schedule"]}
+              rows={rounds.map((round) => [
+                round.roundOrder,
+                round.roundName,
+                round.finalRound ? "Yes" : "No",
+                round.status,
+                round.resultPublished ? `Published ${round.resultPublishedAt ? new Date(round.resultPublishedAt).toLocaleString() : ""}` : "Round result not published yet.",
+                round.resultPublished ? (roundProgress[round.id]?.status ?? "No result") : "Round result not published yet.",
+                round.scheduledAt ? new Date(round.scheduledAt).toLocaleString() : "-"
+              ])}
               emptyMessage="No rounds configured."
             />
           </Card>
@@ -166,7 +204,11 @@ export default function StudentEventDetailPage() {
                   <div key={item.id} className="rounded-lg border border-kec-border p-3 text-sm">
                     <p className="font-bold text-kec-text">{item.title}</p>
                     {item.description ? <p className="mt-1 text-kec-secondary">{item.description}</p> : null}
-                    {item.referenceLink ? <a className="mt-2 inline-block font-semibold text-kec-purple" href={item.referenceLink} target="_blank" rel="noreferrer">Open reference</a> : null}
+                    {item.links.length ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {item.links.map((link) => <a key={`${link.id}-${link.url}`} className="rounded-full bg-kec-purple/10 px-3 py-1 text-xs font-semibold text-kec-purple" href={link.url} target="_blank" rel="noopener noreferrer">{link.label || shortUrl(link.url)}</a>)}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -237,4 +279,13 @@ export default function StudentEventDetailPage() {
       ) : <Card>Loading event...</Card>}
     </AppShell>
   );
+}
+
+function shortUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.hostname.replace(/^www\./, "");
+  } catch {
+    return value.length > 28 ? `${value.slice(0, 25)}...` : value;
+  }
 }

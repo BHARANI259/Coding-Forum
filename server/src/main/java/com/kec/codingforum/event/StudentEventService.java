@@ -13,6 +13,8 @@ import java.util.List;
 @Service
 public class StudentEventService {
 
+    private static final List<String> STUDENT_VISIBLE_STATUSES = List.of("PUBLISHED", "ONGOING", "COMPLETED");
+
     private final EventRepository events;
     private final StudentRepository students;
     private final EventEligibilityService eligibilityService;
@@ -30,7 +32,7 @@ public class StudentEventService {
     @Transactional(readOnly = true)
     public List<EventListItemDto> listEligible() {
         Student student = currentStudent();
-        return events.findByStatusInOrderByStartDatetimeAsc(List.of("PUBLISHED", "ONGOING")).stream()
+        return events.findByStatusInOrderByStartDatetimeAsc(STUDENT_VISIBLE_STATUSES).stream()
                 .filter(event -> eligibilityService.isEligible(event, student))
                 .map(event -> EventMapper.listItem(event, rounds.countByEventId(event.getId()), problemStatements.countByEventIdAndActiveTrue(event.getId())))
                 .toList();
@@ -40,7 +42,7 @@ public class StudentEventService {
     public EventDetailDto getEligible(Long id) {
         Student student = currentStudent();
         Event event = events.findById(id).orElseThrow(() -> new IllegalArgumentException("Event not found."));
-        if (!List.of("PUBLISHED", "ONGOING").contains(event.getStatus())) {
+        if (!STUDENT_VISIBLE_STATUSES.contains(event.getStatus())) {
             throw new IllegalArgumentException("Event not found.");
         }
         eligibilityService.assertEligible(event, student);

@@ -28,3 +28,472 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+.event-rounds-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05);
+  padding: 20px;
+}
+
+.event-rounds-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #eef0f4;
+  padding-bottom: 16px;
+}
+
+.event-rounds-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.event-rounds-icon-box,
+.event-rounds-round-icon,
+.event-rounds-info-icon,
+.event-rounds-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: #f3edff;
+  color: #6d4aff;
+  font-weight: 800;
+}
+
+.event-rounds-icon-box {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+}
+
+.event-rounds-title {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.event-rounds-subtitle,
+.event-rounds-section-subtitle {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.event-rounds-primary-btn,
+.event-rounds-save-btn,
+.event-rounds-action-btn {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.event-rounds-primary-btn,
+.event-rounds-save-btn,
+.event-rounds-action-primary {
+  background: #6d4aff;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(109, 74, 255, 0.16);
+}
+
+.event-rounds-primary-btn:hover,
+.event-rounds-save-btn:hover,
+.event-rounds-action-primary:hover {
+  background: #5b3fb0;
+}
+
+.event-rounds-form-card {
+  margin-top: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fbfbfe;
+  padding: 16px;
+}
+
+.event-rounds-section-title {
+  margin: 0;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.event-rounds-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(120px, 0.6fr) auto auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.event-rounds-field {
+  display: grid;
+  gap: 6px;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.event-rounds-input,
+.event-rounds-select {
+  min-height: 38px;
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.event-rounds-input:focus,
+.event-rounds-select:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.14);
+}
+
+.event-rounds-toggle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.event-rounds-toggle {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #e5e7eb;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.event-rounds-toggle span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(17, 24, 39, 0.18);
+  transition: transform 0.15s ease;
+}
+
+.event-rounds-toggle-on {
+  border-color: #6d4aff;
+  background: #6d4aff;
+}
+
+.event-rounds-toggle-on span {
+  transform: translateX(18px);
+}
+
+.event-rounds-configured {
+  margin-top: 20px;
+}
+
+.event-rounds-timeline {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.event-rounds-timeline::before {
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  left: 17px;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #7c3aed, #c4b5fd);
+  content: "";
+}
+
+.event-rounds-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.event-rounds-marker {
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #6d4aff;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(109, 74, 255, 0.2);
+}
+
+.event-rounds-item-card {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr);
+  align-items: stretch;
+  gap: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 14px;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+  overflow: hidden;
+}
+
+.event-rounds-item-final .event-rounds-item-card {
+  border-color: #fde68a;
+  background: linear-gradient(90deg, #fffdf4, #ffffff);
+}
+
+.event-rounds-round-main,
+.event-rounds-round-title-row,
+.event-rounds-badge-row,
+.event-rounds-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-rounds-round-main {
+  min-width: 0;
+}
+
+.event-rounds-round-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+}
+
+.event-rounds-round-title-row,
+.event-rounds-badge-row {
+  flex-wrap: wrap;
+}
+
+.event-rounds-round-title {
+  margin: 0;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.event-rounds-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.event-rounds-badge-order,
+.event-rounds-badge-neutral {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.event-rounds-badge-final {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.event-rounds-badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.event-rounds-badge-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.event-rounds-badge-info {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.event-rounds-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.event-rounds-meta-label {
+  margin: 0 0 6px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.event-rounds-meta-value {
+  margin: 0;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.event-rounds-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.event-rounds-action-btn {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.event-rounds-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  box-shadow: none;
+}
+
+.event-rounds-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  border: 1px dashed #d8dbe2;
+  border-radius: 12px;
+  padding: 32px 18px;
+  text-align: center;
+}
+
+.event-rounds-empty-icon {
+  width: 38px;
+  height: 38px;
+  font-size: 16px;
+}
+
+.event-rounds-empty p {
+  margin: 0;
+  color: #111827;
+  font-weight: 800;
+}
+
+.event-rounds-empty span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.event-rounds-info-box {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+  padding: 14px;
+}
+
+.event-rounds-info-icon {
+  width: 34px;
+  height: 34px;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.event-rounds-info-box h3 {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.event-rounds-info-box p {
+  margin: 4px 0 0;
+  color: #1e40af;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (min-width: 1280px) {
+  .event-rounds-item-card {
+    grid-template-columns: minmax(260px, 0.95fr) minmax(320px, 1fr);
+    align-items: center;
+  }
+}
+
+@media (max-width: 1279px) {
+  .event-rounds-meta-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .event-rounds-meta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .event-rounds-card {
+    padding: 18px;
+  }
+
+  .event-rounds-header,
+  .event-rounds-heading,
+  .event-rounds-info-box {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .event-rounds-primary-btn,
+  .event-rounds-save-btn {
+    width: 100%;
+  }
+
+  .event-rounds-form-grid,
+  .event-rounds-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-rounds-timeline::before {
+    left: 15px;
+  }
+
+  .event-rounds-item {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .event-rounds-marker {
+    width: 32px;
+    height: 32px;
+  }
+
+  .event-rounds-round-main {
+    align-items: flex-start;
+  }
+}

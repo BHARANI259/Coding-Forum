@@ -194,6 +194,11 @@ export type EventItem = {
   roundsCount: number;
   problemStatementCount: number;
   resultsPublished: boolean;
+  posterImageUrl: string | null;
+  posterOriginalName: string | null;
+  posterContentType: string | null;
+  posterSizeBytes: number | null;
+  posterUploadedAt: string | null;
 };
 
 export type EventDetail = EventItem & {
@@ -228,15 +233,32 @@ export type EventPayload = {
   inchargeFacultyIds: number[];
 };
 
+export type EventPoster = {
+  eventId: number;
+  posterImageUrl: string | null;
+  posterOriginalName: string | null;
+  posterContentType: string | null;
+  posterSizeBytes: number | null;
+  posterUploadedAt: string | null;
+};
+
 export type ProblemStatement = {
   id: number;
   eventId: number;
   title: string;
   description: string | null;
   referenceLink: string | null;
+  links: ProblemStatementLink[];
   active: boolean;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ProblemStatementLink = {
+  id: number | null;
+  label: string | null;
+  url: string;
+  displayOrder: number;
 };
 
 export type EventRound = {
@@ -248,6 +270,8 @@ export type EventRound = {
   finalRound: boolean;
   description: string | null;
   scheduledAt: string | null;
+  resultPublished: boolean;
+  resultPublishedAt: string | null;
 };
 
 export type RoundPayload = {
@@ -279,6 +303,7 @@ export type ProblemStatementPayload = {
   description: string;
   referenceLink: string;
   active: boolean;
+  links: ProblemStatementLink[];
 };
 
 export type TeamMember = {
@@ -483,11 +508,14 @@ export type AdminAnalyticsSummary = {
   totalDepartments: number;
   totalEvents: number;
   publishedEvents: number;
+  completedEvents: number;
   activeEvents: number;
   totalRegistrations: number;
   totalTeams: number;
   totalResults: number;
   totalPointsAwarded: number;
+  totalProblemStatements: number;
+  totalEventMedia: number;
 };
 
 export type DepartmentAnalytics = {
@@ -516,6 +544,99 @@ export type RecentActivity = {
   subtitle: string;
   points: number;
   occurredAt: string;
+};
+
+export type AnalyticsFilterOption = {
+  id: number;
+  label: string;
+  secondaryLabel: string | null;
+};
+
+export type AdminAnalyticsFilters = {
+  departments: AnalyticsFilterOption[];
+  categories: AnalyticsFilterOption[];
+  technicalAreas: string[];
+  eventStatuses: string[];
+};
+
+export type DepartmentParticipationChartRow = {
+  departmentId: number;
+  departmentCode: string;
+  departmentName: string;
+  totalRegistrations: number;
+  uniqueStudentsParticipated: number;
+};
+
+export type DepartmentPointsChartRow = {
+  departmentId: number;
+  departmentCode: string;
+  departmentName: string;
+  totalPoints: number;
+  wins: number;
+  runnerUps: number;
+  secondRunnerUps: number;
+};
+
+export type CategoryParticipationChartRow = {
+  categoryId: number;
+  categoryName: string;
+  registrationCount: number;
+  uniqueStudentsParticipated: number;
+};
+
+export type RegistrationTrendRow = {
+  period: string;
+  registrationCount: number;
+};
+
+export type ResultDistributionRow = {
+  resultType: string;
+  count: number;
+};
+
+export type TechnicalAreaParticipationRow = {
+  technicalArea: string;
+  registrationCount: number;
+  uniqueStudentsParticipated: number;
+};
+
+export type EventStatusSummaryRow = {
+  status: string;
+  count: number;
+};
+
+export type TopStudentAnalyticsRow = {
+  rank: number;
+  studentId: number;
+  registerNumber: string;
+  studentName: string;
+  departmentCode: string | null;
+  year: number;
+  section: string | null;
+  technicalArea: string;
+  totalPoints: number;
+  eventsParticipated: number;
+  wins: number;
+};
+
+export type TopDepartmentAnalyticsRow = {
+  rank: number;
+  departmentId: number;
+  departmentCode: string;
+  departmentName: string;
+  totalPoints: number;
+  participationCount: number;
+  wins: number;
+};
+
+export type EventEngagementRow = {
+  eventId: number;
+  eventTitle: string;
+  categoryName: string;
+  eventType: string;
+  registrationCount: number;
+  teamCount: number;
+  resultsPublished: boolean;
 };
 
 export type FacultyDepartmentSummary = {
@@ -595,7 +716,12 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const text = await response.text();
+  if (!text.trim()) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
 }
 
 export async function downloadFile(endpoint: string, fallbackFilename: string) {
@@ -835,6 +961,12 @@ export function updateProblemStatementStatus(eventId: number, problemStatementId
   });
 }
 
+export function deleteProblemStatement(eventId: number, problemStatementId: number) {
+  return apiFetch<ProblemStatement>(`/admin/events/${eventId}/problem-statements/${problemStatementId}`, {
+    method: "DELETE"
+  });
+}
+
 export function getStudentProblemStatements(eventId: number) {
   return apiFetch<ProblemStatement[]>(`/student/events/${eventId}/problem-statements`);
 }
@@ -901,6 +1033,10 @@ export function getStudentRounds(eventId: number) {
   return apiFetch<EventRound[]>(`/student/events/${eventId}/rounds`);
 }
 
+export function getStudentRoundResult(eventId: number, roundId: number) {
+  return apiFetch<RoundResult | null>(`/student/events/${eventId}/rounds/${roundId}/result`);
+}
+
 export function getAdminRoundResults(eventId: number, roundId: number) {
   return apiFetch<RoundResult[]>(`/admin/events/${eventId}/rounds/${roundId}/results`);
 }
@@ -919,6 +1055,14 @@ export function declareAdminRoundStudentResult(eventId: number, roundId: number,
   });
 }
 
+export function publishAdminRoundResult(eventId: number, roundId: number) {
+  return apiFetch<void>(`/admin/events/${eventId}/rounds/${roundId}/publish-round-result`, { method: "POST" });
+}
+
+export function publishAdminFinalResult(eventId: number, roundId: number) {
+  return apiFetch<void>(`/admin/events/${eventId}/rounds/${roundId}/publish-final-result`, { method: "POST" });
+}
+
 export function getFacultyRoundResults(eventId: number, roundId: number) {
   return apiFetch<RoundResult[]>(`/faculty/events/${eventId}/rounds/${roundId}/results`);
 }
@@ -935,6 +1079,14 @@ export function declareFacultyRoundStudentResult(eventId: number, roundId: numbe
     method: "POST",
     body: JSON.stringify({ studentId, status })
   });
+}
+
+export function publishFacultyRoundResult(eventId: number, roundId: number) {
+  return apiFetch<void>(`/faculty/events/${eventId}/rounds/${roundId}/publish-round-result`, { method: "POST" });
+}
+
+export function publishFacultyFinalResult(eventId: number, roundId: number) {
+  return apiFetch<void>(`/faculty/events/${eventId}/rounds/${roundId}/publish-final-result`, { method: "POST" });
 }
 
 export function createTeam(eventId: number, payload: { teamName: string }) {
@@ -1077,6 +1229,10 @@ export function getAdminAnalyticsSummary() {
   return apiFetch<AdminAnalyticsSummary>("/admin/analytics/summary");
 }
 
+export function getAdminAnalyticsOverview() {
+  return apiFetch<AdminAnalyticsSummary>("/admin/analytics/overview");
+}
+
 export function getAdminDepartmentAnalytics() {
   return apiFetch<DepartmentAnalytics[]>("/admin/analytics/departments");
 }
@@ -1087,6 +1243,50 @@ export function getAdminCategoryAnalytics() {
 
 export function getAdminRecentActivity() {
   return apiFetch<RecentActivity[]>("/admin/analytics/recent-activity");
+}
+
+export function getAdminAnalyticsFilters() {
+  return apiFetch<AdminAnalyticsFilters>("/admin/analytics/filters");
+}
+
+export function getDepartmentParticipation(filters: Record<string, string | number | boolean | undefined> = {}) {
+  return apiFetch<DepartmentParticipationChartRow[]>(`/admin/analytics/department-participation${toQuery(filters)}`);
+}
+
+export function getDepartmentPoints(filters: Record<string, string | number | boolean | undefined> = {}) {
+  return apiFetch<DepartmentPointsChartRow[]>(`/admin/analytics/department-points${toQuery(filters)}`);
+}
+
+export function getCategoryParticipation(filters: Record<string, string | number | boolean | undefined> = {}) {
+  return apiFetch<CategoryParticipationChartRow[]>(`/admin/analytics/category-participation${toQuery(filters)}`);
+}
+
+export function getRegistrationTrend(filters: Record<string, string | number | boolean | undefined> = {}) {
+  return apiFetch<RegistrationTrendRow[]>(`/admin/analytics/registration-trend${toQuery(filters)}`);
+}
+
+export function getResultDistribution(filters: Record<string, string | number | boolean | undefined> = {}) {
+  return apiFetch<ResultDistributionRow[]>(`/admin/analytics/result-distribution${toQuery(filters)}`);
+}
+
+export function getTechnicalAreaParticipation(filters: Record<string, string | number | boolean | undefined> = {}) {
+  return apiFetch<TechnicalAreaParticipationRow[]>(`/admin/analytics/technical-area-participation${toQuery(filters)}`);
+}
+
+export function getEventStatusSummary() {
+  return apiFetch<EventStatusSummaryRow[]>("/admin/analytics/event-status-summary");
+}
+
+export function getTopStudents(filters: Record<string, string | number | boolean | undefined> = {}) {
+  return apiFetch<TopStudentAnalyticsRow[]>(`/admin/analytics/top-students${toQuery(filters)}`);
+}
+
+export function getTopDepartments(filters: Record<string, string | number | boolean | undefined> = {}) {
+  return apiFetch<TopDepartmentAnalyticsRow[]>(`/admin/analytics/top-departments${toQuery(filters)}`);
+}
+
+export function getEventEngagement(filters: Record<string, string | number | boolean | undefined> = {}) {
+  return apiFetch<EventEngagementRow[]>(`/admin/analytics/event-engagement${toQuery(filters)}`);
 }
 
 export function getFacultyDepartmentSummary() {

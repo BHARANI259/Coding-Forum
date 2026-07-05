@@ -28,6 +28,11 @@ public record EventListItemDto(
         Set<String> allowedTechnicalAreas,
         long roundsCount,
         long problemStatementCount,
-        boolean resultsPublished
+        boolean resultsPublished,
+        String posterImageUrl,
+        String posterOriginalName,
+        String posterContentType,
+        Long posterSizeBytes,
+        LocalDateTime posterUploadedAt
 ) {
 }

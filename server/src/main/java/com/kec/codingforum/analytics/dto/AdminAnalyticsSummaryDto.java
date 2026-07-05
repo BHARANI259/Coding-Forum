@@ -6,10 +6,13 @@ public record AdminAnalyticsSummaryDto(
         Long totalDepartments,
         Long totalEvents,
         Long publishedEvents,
+        Long completedEvents,
         Long activeEvents,
         Long totalRegistrations,
         Long totalTeams,
         Long totalResults,
-        Long totalPointsAwarded
+        Long totalPointsAwarded,
+        Long totalProblemStatements,
+        Long totalEventMedia
 ) {
 }

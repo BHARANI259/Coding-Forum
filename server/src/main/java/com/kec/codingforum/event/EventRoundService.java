@@ -74,6 +74,7 @@ public class EventRoundService {
     @Transactional
     public EventRoundDto update(Long eventId, Long roundId, UpdateEventRoundRequest request) {
         EventRound round = findRound(eventId, roundId);
+        assertEditable(round);
         if (rounds.existsByEventIdAndRoundOrderAndIdNot(eventId, request.roundOrder(), roundId)) {
             throw new IllegalArgumentException("Round order already exists for this event.");
         }
@@ -91,6 +92,7 @@ public class EventRoundService {
     @Transactional
     public EventRoundDto updateStatus(Long eventId, Long roundId, String status) {
         EventRound round = findRound(eventId, roundId);
+        assertEditable(round);
         round.setStatus(validStatus(status));
         round.setUpdatedAt(LocalDateTime.now());
         notifyRoundUpdated(round.getEvent(), round);
@@ -105,7 +107,9 @@ public class EventRoundService {
 
     @Transactional
     public void delete(Long eventId, Long roundId) {
-        rounds.delete(findRound(eventId, roundId));
+        EventRound round = findRound(eventId, roundId);
+        assertEditable(round);
+        rounds.delete(round);
     }
 
     private List<EventRoundDto> listDtos(Long eventId) {
@@ -137,6 +141,12 @@ public class EventRoundService {
         return rounds.findByIdAndEventId(roundId, eventId).orElseThrow(() -> new IllegalArgumentException("Round not found."));
     }
 
+    private void assertEditable(EventRound round) {
+        if (round.isResultPublished()) {
+            throw new IllegalArgumentException("This round result has been published. Editing is disabled.");
+        }
+    }
+
     private void notifyRoundUpdated(Event event, EventRound round) {
         notificationService.notifyUsers(
                 recipientResolver.combine(recipientResolver.getRegisteredStudentUserIds(event.getId()), recipientResolver.getAssignedFacultyUserIds(event.getId())),
@@ -149,7 +159,7 @@ public class EventRoundService {
     }
 
     private EventRoundDto toDto(EventRound round) {
-        return new EventRoundDto(round.getId(), round.getEvent().getId(), round.getRoundName(), round.getRoundOrder(), round.getStatus(), round.isFinalRound(), round.getDescription(), round.getScheduledAt());
+        return new EventRoundDto(round.getId(), round.getEvent().getId(), round.getRoundName(), round.getRoundOrder(), round.getStatus(), round.isFinalRound(), round.getDescription(), round.getScheduledAt(), round.isResultPublished(), round.getResultPublishedAt());
     }
 
     private String validStatus(String status) {

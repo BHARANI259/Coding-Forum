@@ -24,9 +24,11 @@ import java.util.List;
 public class AdminEventRoundController {
 
     private final EventRoundService service;
+    private final EventRoundResultService roundResultService;
 
-    public AdminEventRoundController(EventRoundService service) {
+    public AdminEventRoundController(EventRoundService service, EventRoundResultService roundResultService) {
         this.service = service;
+        this.roundResultService = roundResultService;
     }
 
     @GetMapping
@@ -52,5 +54,15 @@ public class AdminEventRoundController {
     @DeleteMapping("/{roundId}")
     public void delete(@PathVariable Long eventId, @PathVariable Long roundId) {
         service.delete(eventId, roundId);
+    }
+
+    @PostMapping("/{roundId}/publish-round-result")
+    public void publishRoundResult(@PathVariable Long eventId, @PathVariable Long roundId) {
+        roundResultService.publishRoundResult(eventId, roundId, com.kec.codingforum.security.SecurityUtils.getCurrentUserId());
+    }
+
+    @PostMapping("/{roundId}/publish-final-result")
+    public void publishFinalResult(@PathVariable Long eventId, @PathVariable Long roundId) {
+        roundResultService.publishFinalResult(eventId, roundId, com.kec.codingforum.security.SecurityUtils.getCurrentUserId());
     }
 }

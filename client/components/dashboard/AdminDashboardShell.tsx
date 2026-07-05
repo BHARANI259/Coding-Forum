@@ -5,32 +5,40 @@ import AppShell from "@/components/layout/AppShell";
 import DataTable from "@/components/ui/DataTable";
 import PageHeader from "@/components/ui/PageHeader";
 import StatCard from "@/components/ui/StatCard";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import Link from "next/link";
 import {
-  getAdminAnalyticsSummary,
-  getAdminRecentActivity,
-  getDepartmentLeaderboard,
+  getAdminAnalyticsOverview,
+  getEventEngagement,
+  getTopDepartments,
+  getTopStudents,
   type AdminAnalyticsSummary,
-  type DepartmentLeaderboardRow,
-  type RecentActivity
+  type EventEngagementRow,
+  type TopDepartmentAnalyticsRow,
+  type TopStudentAnalyticsRow
 } from "@/lib/api";
 
 export default function AdminDashboardShell() {
   const [summary, setSummary] = useState<AdminAnalyticsSummary | null>(null);
-  const [topDepartments, setTopDepartments] = useState<DepartmentLeaderboardRow[]>([]);
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [topDepartments, setTopDepartments] = useState<TopDepartmentAnalyticsRow[]>([]);
+  const [topStudents, setTopStudents] = useState<TopStudentAnalyticsRow[]>([]);
+  const [eventEngagement, setEventEngagement] = useState<EventEngagementRow[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
       try {
-        const [analytics, departments, activity] = await Promise.all([
-          getAdminAnalyticsSummary(),
-          getDepartmentLeaderboard(),
-          getAdminRecentActivity()
+        const [analytics, departments, students, events] = await Promise.all([
+          getAdminAnalyticsOverview(),
+          getTopDepartments({ limit: 5 }),
+          getTopStudents({ limit: 5 }),
+          getEventEngagement({ limit: 5 })
         ]);
         setSummary(analytics);
-        setTopDepartments(departments.slice(0, 5));
-        setRecentActivity(activity.slice(0, 5));
+        setTopDepartments(departments);
+        setTopStudents(students);
+        setEventEngagement(events);
       } catch (exception) {
         setError(exception instanceof Error ? exception.message : "Unable to load admin analytics.");
       }
@@ -43,6 +51,7 @@ export default function AdminDashboardShell() {
       <PageHeader
         title="SuperAdmin Dashboard"
         subtitle="Institution-level coding forum administration."
+        actions={<Link href="/admin/analytics"><Button type="button">View Full Analytics</Button></Link>}
       />
       {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -50,40 +59,63 @@ export default function AdminDashboardShell() {
         <StatCard label="Total Faculty" value={summary?.totalFaculty ?? 0} hint="Faculty accounts" />
         <StatCard label="Total Events" value={summary?.totalEvents ?? 0} hint="All statuses" />
         <StatCard label="Published Events" value={summary?.publishedEvents ?? 0} hint="Visible to students" />
+        <StatCard label="Completed Events" value={summary?.completedEvents ?? 0} hint="Closed events" />
         <StatCard label="Total Registrations" value={summary?.totalRegistrations ?? 0} hint="Registered rows" />
         <StatCard label="Total Teams" value={summary?.totalTeams ?? 0} hint="Created teams" />
         <StatCard label="Total Results" value={summary?.totalResults ?? 0} hint="Declared results" />
         <StatCard label="Total Points Awarded" value={summary?.totalPointsAwarded ?? 0} hint="From student points" />
       </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <section className="space-y-3">
-          <h2 className="text-lg font-bold text-kec-text">Top Departments</h2>
+      <div className="mt-6 space-y-6">
+        <Card>
+          <h2 className="text-base font-bold text-kec-text">Top Departments</h2>
+          <p className="mt-1 text-sm text-kec-secondary">Ranked by student points.</p>
+          <div className="mt-4">
           <DataTable
             headers={["Rank", "Department", "Points", "Participants", "Wins"]}
             rows={topDepartments.map((row) => [
               row.rank,
               `${row.departmentCode} - ${row.departmentName}`,
               row.totalPoints,
-              row.totalParticipants,
+              row.participationCount,
               row.wins
             ])}
             emptyMessage="No department points yet."
           />
-        </section>
-        <section className="space-y-3">
-          <h2 className="text-lg font-bold text-kec-text">Recent Activity</h2>
+          </div>
+        </Card>
+        <Card>
+          <h2 className="text-base font-bold text-kec-text">Top Students</h2>
+          <p className="mt-1 text-sm text-kec-secondary">Highest scoring participants.</p>
+          <div className="mt-4">
           <DataTable
-            headers={["Type", "Title", "Details", "Points", "Date"]}
-            rows={recentActivity.map((item) => [
-              item.activityType,
-              item.title,
-              item.subtitle,
-              item.points,
-              new Date(item.occurredAt).toLocaleString()
+            headers={["Rank", "Student", "Dept", "Points", "Wins"]}
+            rows={topStudents.map((row) => [
+              row.rank,
+              `${row.studentName} (${row.registerNumber})`,
+              row.departmentCode ?? "-",
+              row.totalPoints,
+              row.wins
             ])}
-            emptyMessage="No recent point or result activity."
+            emptyMessage="No student points yet."
           />
-        </section>
+          </div>
+        </Card>
+        <Card>
+          <h2 className="text-base font-bold text-kec-text">Event Engagement</h2>
+          <p className="mt-1 text-sm text-kec-secondary">Events with the most registrations.</p>
+          <div className="mt-4">
+            <DataTable
+              headers={["Event", "Category", "Registrations", "Teams"]}
+              rows={eventEngagement.map((row) => [
+                row.eventTitle,
+                row.categoryName,
+                row.registrationCount,
+                row.teamCount
+              ])}
+              emptyMessage="No event engagement yet."
+            />
+          </div>
+        </Card>
       </div>
     </AppShell>
   );

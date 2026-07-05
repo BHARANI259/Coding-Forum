@@ -11,6 +11,10 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 100MB
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
@@ -36,3 +40,7 @@ app:
     email-enabled: ${NOTIFICATION_EMAIL_ENABLED:false}
     websocket-enabled: ${NOTIFICATION_WEBSOCKET_ENABLED:true}
     from-name: ${NOTIFICATION_FROM_NAME:KEC Coding Forum}
+  uploads:
+    root-dir: ${UPLOAD_ROOT_DIR:uploads}
+    event-posters-dir: ${EVENT_POSTERS_DIR:event-posters}
+    event-media-dir: ${EVENT_MEDIA_DIR:event-media}

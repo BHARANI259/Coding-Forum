@@ -14,4 +14,6 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     long countByEventIdAndLockedAfterRegistrationTrue(Long eventId);
 
     List<Team> findByEventIdOrderByCreatedAtAsc(Long eventId);
+
+    boolean existsByProblemStatementId(Long problemStatementId);
 }

@@ -10,6 +10,8 @@ public record EventRoundDto(
         String status,
         boolean finalRound,
         String description,
-        LocalDateTime scheduledAt
+        LocalDateTime scheduledAt,
+        boolean resultPublished,
+        LocalDateTime resultPublishedAt
 ) {
 }

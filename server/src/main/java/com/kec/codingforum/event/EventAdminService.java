@@ -117,10 +117,15 @@ public class EventAdminService {
     public EventDetailDto updateStatus(Long id, UpdateEventStatusRequest request) {
         Event event = findEvent(id);
         String oldStatus = event.getStatus();
+        boolean oldRegistrationOpen = event.isRegistrationOpen();
         event.setStatus(validStatus(request.status(), false));
+        closeRegistrationIfTerminal(event);
         event.setUpdatedAt(LocalDateTime.now());
         if (!"PUBLISHED".equals(oldStatus) && "PUBLISHED".equals(event.getStatus())) {
             notifyEventPublished(event);
+        }
+        if (oldRegistrationOpen && !event.isRegistrationOpen()) {
+            notifyRegistrationClosed(event);
         }
         return EventMapper.detail(event, rounds.countByEventId(event.getId()), problemStatements.countByEventIdAndActiveTrue(event.getId()));
     }
@@ -129,6 +134,9 @@ public class EventAdminService {
     public EventDetailDto updateRegistration(Long id, UpdateRegistrationStatusRequest request) {
         Event event = findEvent(id);
         boolean oldRegistrationOpen = event.isRegistrationOpen();
+        if (request.registrationOpen() && isTerminalStatus(event.getStatus())) {
+            throw new IllegalArgumentException("Registration cannot be opened for completed or cancelled events.");
+        }
         event.setRegistrationOpen(request.registrationOpen());
         event.setUpdatedAt(LocalDateTime.now());
         if (oldRegistrationOpen && !event.isRegistrationOpen()) {
@@ -242,6 +250,7 @@ public class EventAdminService {
         event.setMaxParticipants(maxParticipants);
         event.setPlacementWillingOnly(placementWillingOnly);
         event.setStatus(validStatus(status, true));
+        closeRegistrationIfTerminal(event);
         event.setUpdatedAt(LocalDateTime.now());
 
         if ("TEAM".equals(normalizedEventType)) {
@@ -283,6 +292,16 @@ public class EventAdminService {
         if (oldRegistrationOpen && !event.isRegistrationOpen()) {
             notifyRegistrationClosed(event);
         }
+    }
+
+    private void closeRegistrationIfTerminal(Event event) {
+        if (isTerminalStatus(event.getStatus())) {
+            event.setRegistrationOpen(false);
+        }
+    }
+
+    private boolean isTerminalStatus(String status) {
+        return "COMPLETED".equals(status) || "CANCELLED".equals(status);
     }
 
     private void notifyEventPublished(Event event) {
