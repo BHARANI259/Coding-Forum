@@ -29,6 +29,88 @@ a {
   text-decoration: none;
 }
 
+.auth-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: url("/library-kec.png") center / cover no-repeat fixed;
+}
+
+.auth-login-card {
+  width: min(100%, 460px);
+  position: relative;
+  border: 2px solid rgba(109, 74, 255, 0.82);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 24px 80px rgba(17, 24, 39, 0.32), 0 0 0 6px rgba(109, 74, 255, 0.08);
+  backdrop-filter: blur(8px);
+  padding: 34px;
+  animation: auth-login-fade-in 0.42s ease-out both;
+}
+
+.auth-login-card h1,
+.auth-login-card h2,
+.auth-login-card label {
+  color: #111827;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.auth-login-card p {
+  color: #374151;
+}
+
+.auth-login-card-exit {
+  animation: auth-login-fade-out 0.22s ease-in both;
+}
+
+.auth-login-back {
+  display: inline-flex;
+  margin-bottom: 22px;
+  color: #6d4aff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.auth-login-back:hover {
+  color: #5b3fb0;
+}
+
+@keyframes auth-login-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes auth-login-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+}
+
+@media (max-width: 640px) {
+  .auth-login-page {
+    padding: 16px;
+    align-items: stretch;
+  }
+
+  .auth-login-card {
+    margin: auto 0;
+    padding: 24px;
+  }
+}
+
 .event-rounds-card {
   border: 1px solid #e5e7eb;
   border-radius: 12px;

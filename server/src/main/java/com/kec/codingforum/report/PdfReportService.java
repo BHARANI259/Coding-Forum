@@ -1,6 +1,7 @@
 package com.kec.codingforum.report;
 
 import com.kec.codingforum.report.ReportModels.DepartmentReportData;
+import com.kec.codingforum.report.ReportModels.EventMediaReportRow;
 import com.kec.codingforum.report.ReportModels.EventParticipantReportRow;
 import com.kec.codingforum.report.ReportModels.EventReportData;
 import com.kec.codingforum.report.ReportModels.EventResultReportRow;
@@ -8,6 +9,7 @@ import com.kec.codingforum.report.ReportModels.EventTeamReportRow;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
+import com.lowagie.text.Image;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
@@ -18,6 +20,8 @@ import org.springframework.stereotype.Service;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
@@ -41,6 +45,41 @@ public class PdfReportService {
         document.open();
 
         addHeader(document, "Event Report", eventHeldOn(data));
+        addSingleEventSections(document, data);
+
+        document.close();
+        return output.toByteArray();
+    }
+
+    public byte[] yearlyEventReport(List<EventReportData> events, String academicYear) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4.rotate(), 28, 28, 28, 28);
+        PdfWriter.getInstance(document, output);
+        document.open();
+
+        addHeader(document, "Yearly Event Report - " + academicYear, null);
+        if (events == null || events.isEmpty()) {
+            addSection(document, "Events");
+            table(document, new String[]{"Events"}, List.of());
+        } else {
+            for (int index = 0; index < events.size(); index++) {
+                EventReportData data = events.get(index);
+                if (index > 0) {
+                    document.newPage();
+                }
+                Paragraph eventTitle = new Paragraph("Event " + (index + 1) + ": " + data.title(), TITLE);
+                eventTitle.setSpacingBefore(4);
+                eventTitle.setSpacingAfter(8);
+                document.add(eventTitle);
+                addSingleEventSections(document, data);
+            }
+        }
+
+        document.close();
+        return output.toByteArray();
+    }
+
+    private void addSingleEventSections(Document document, EventReportData data) {
         addSection(document, "Event Summary");
         addKeyValueTable(document, List.of(
                 row("Event", data.title()),
@@ -110,8 +149,8 @@ public class PdfReportService {
                 .map(row -> new String[]{row.departmentCode(), String.valueOf(row.participants()), String.valueOf(row.points()), String.valueOf(row.wins()), String.valueOf(row.runnerUps())})
                 .toList());
 
-        document.close();
-        return output.toByteArray();
+        addSection(document, "Post-Event Images");
+        addEventImages(document, data.media());
     }
 
     public byte[] departmentReport(DepartmentReportData data) {
@@ -219,6 +258,42 @@ public class PdfReportService {
                     table.addCell(cell);
                 }
             }
+        }
+        document.add(table);
+    }
+
+    private void addEventImages(Document document, List<EventMediaReportRow> mediaRows) {
+        if (mediaRows == null || mediaRows.isEmpty()) {
+            table(document, new String[]{"Images"}, List.of());
+            return;
+        }
+
+        PdfPTable table = new PdfPTable(2);
+        table.setWidthPercentage(100);
+        for (EventMediaReportRow media : mediaRows.stream().limit(2).toList()) {
+            PdfPCell cell = new PdfPCell();
+            cell.setPadding(6);
+            try {
+                Path path = Path.of(media.filePath());
+                if (Files.exists(path) && Files.isRegularFile(path)) {
+                    Image image = Image.getInstance(path.toAbsolutePath().toString());
+                    image.scaleToFit(340, 190);
+                    image.setAlignment(Element.ALIGN_CENTER);
+                    cell.addElement(image);
+                } else {
+                    cell.addElement(new Paragraph("Image file not available.", NORMAL));
+                }
+            } catch (Exception exception) {
+                cell.addElement(new Paragraph("Image could not be rendered.", NORMAL));
+            }
+            cell.addElement(new Paragraph(value(media.mediaType()) + " - " + value(media.caption()), NORMAL));
+            cell.addElement(new Paragraph(value(media.originalFileName()), META));
+            table.addCell(cell);
+        }
+        if (mediaRows.size() == 1) {
+            PdfPCell empty = new PdfPCell(new Phrase("", NORMAL));
+            empty.setPadding(6);
+            table.addCell(empty);
         }
         document.add(table);
     }

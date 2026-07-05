@@ -14,6 +14,7 @@ import {
   getMyPointHistory,
   getMyStatistics,
   getStudentProfile,
+  changePassword,
   updateStudentProfile,
   type StudentPointHistory,
   type StudentProfile,
@@ -29,6 +30,8 @@ export default function StudentProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -84,6 +87,26 @@ export default function StudentProfilePage() {
     }
   }
 
+  async function handlePasswordChange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setError("New password and confirmation do not match.");
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      await changePassword(passwordForm.oldPassword, passwordForm.newPassword);
+      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      setSuccess("Password changed successfully.");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Unable to change password.");
+    } finally {
+      setPasswordSaving(false);
+    }
+  }
+
   return (
     <AppShell expectedRole="STUDENT" title="Profile">
       <PageHeader
@@ -114,6 +137,17 @@ export default function StudentProfilePage() {
             </label>
           </div>
           <Button type="submit" loading={saving}>Save Profile</Button>
+        </form>
+      </Card>
+      <Card className="mb-6">
+        <h2 className="text-lg font-bold text-kec-text">Change Password</h2>
+        <form className="mt-4 grid gap-4 sm:grid-cols-3" onSubmit={handlePasswordChange}>
+          <Input label="Current Password" type="password" autoComplete="current-password" value={passwordForm.oldPassword} onChange={(event) => setPasswordForm({ ...passwordForm, oldPassword: event.target.value })} required />
+          <Input label="New Password" type="password" autoComplete="new-password" value={passwordForm.newPassword} onChange={(event) => setPasswordForm({ ...passwordForm, newPassword: event.target.value })} required />
+          <Input label="Confirm Password" type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })} required />
+          <div className="sm:col-span-3">
+            <Button type="submit" loading={passwordSaving}>Change Password</Button>
+          </div>
         </form>
       </Card>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

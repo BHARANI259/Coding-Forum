@@ -354,8 +354,8 @@ public class EventAdminService {
         }
         Set<Integer> result = new HashSet<>();
         for (Integer year : years) {
-            if (year == null || year < 1 || year > 4) {
-                throw new IllegalArgumentException("Allowed years must be between 1 and 4.");
+            if (year == null || year < 1 || year > 5) {
+                throw new IllegalArgumentException("Allowed years must be between 1 and 5.");
             }
             result.add(year);
         }

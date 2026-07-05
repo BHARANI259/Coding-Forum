@@ -3,6 +3,8 @@ package com.kec.codingforum.report;
 import com.kec.codingforum.department.Department;
 import com.kec.codingforum.department.DepartmentRepository;
 import com.kec.codingforum.event.Event;
+import com.kec.codingforum.event.EventMedia;
+import com.kec.codingforum.event.EventMediaRepository;
 import com.kec.codingforum.event.EventProblemStatementRepository;
 import com.kec.codingforum.event.EventRepository;
 import com.kec.codingforum.event.EventRoundRepository;
@@ -15,6 +17,7 @@ import com.kec.codingforum.report.ReportModels.DepartmentReportData;
 import com.kec.codingforum.report.ReportModels.DepartmentStudentPerformanceRow;
 import com.kec.codingforum.report.ReportModels.DepartmentSummaryRow;
 import com.kec.codingforum.report.ReportModels.EventParticipantReportRow;
+import com.kec.codingforum.report.ReportModels.EventMediaReportRow;
 import com.kec.codingforum.report.ReportModels.EventReportData;
 import com.kec.codingforum.report.ReportModels.EventResultReportRow;
 import com.kec.codingforum.report.ReportModels.EventTeamReportRow;
@@ -31,12 +34,14 @@ import com.kec.codingforum.team.TeamMemberRepository;
 import com.kec.codingforum.team.TeamRepository;
 import com.kec.codingforum.user.Student;
 import com.kec.codingforum.user.StudentRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -50,7 +55,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class ReportDataService {
 
     private final EventRepository events;
@@ -63,6 +67,37 @@ public class ReportDataService {
     private final StudentRepository students;
     private final EventProblemStatementRepository problemStatements;
     private final EventRoundRepository rounds;
+    private final EventMediaRepository media;
+    private final Path mediaDir;
+
+    public ReportDataService(
+            EventRepository events,
+            DepartmentRepository departments,
+            RegistrationRepository registrations,
+            TeamRepository teams,
+            TeamMemberRepository teamMembers,
+            ResultRepository results,
+            StudentPointRepository points,
+            StudentRepository students,
+            EventProblemStatementRepository problemStatements,
+            EventRoundRepository rounds,
+            EventMediaRepository media,
+            @Value("${app.uploads.root-dir:uploads}") String rootDir,
+            @Value("${app.uploads.event-media-dir:event-media}") String eventMediaDir
+    ) {
+        this.events = events;
+        this.departments = departments;
+        this.registrations = registrations;
+        this.teams = teams;
+        this.teamMembers = teamMembers;
+        this.results = results;
+        this.points = points;
+        this.students = students;
+        this.problemStatements = problemStatements;
+        this.rounds = rounds;
+        this.media = media;
+        this.mediaDir = Paths.get(rootDir).resolve(eventMediaDir).toAbsolutePath().normalize();
+    }
 
     @Transactional(readOnly = true)
     public EventReportData getEventReportData(Long eventId) {
@@ -124,7 +159,11 @@ public class ReportDataService {
                 participantRows,
                 teamRows,
                 eventResults.stream().map(result -> resultRow(event, result)).toList(),
-                departmentSummary(participantRows, eventResults)
+                departmentSummary(participantRows, eventResults),
+                media.findByEventIdAndDeletedFalseOrderByUploadedAtDesc(eventId).stream()
+                        .limit(2)
+                        .map(this::mediaRow)
+                        .toList()
         );
     }
 
@@ -146,6 +185,18 @@ public class ReportDataService {
     @Transactional(readOnly = true)
     public List<PointReportRow> getEventPointRows(Long eventId) {
         return points.findByEventIdOrderByCreatedAtDesc(eventId).stream().map(this::pointRow).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<EventReportData> getYearlyEventReportData(String academicYear) {
+        AcademicYearRange range = academicYearRange(academicYear);
+        return events.findByStartDatetimeGreaterThanEqualAndStartDatetimeLessThanOrderByStartDatetimeAsc(range.start(), range.end()).stream()
+                .map(event -> getEventReportData(event.getId()))
+                .toList();
+    }
+
+    public String currentAcademicYearLabel() {
+        return academicYearRange(null).label();
     }
 
     @Transactional(readOnly = true)
@@ -274,6 +325,26 @@ public class ReportDataService {
         return events.findById(eventId).orElseThrow(() -> new IllegalArgumentException("Event not found."));
     }
 
+    private AcademicYearRange academicYearRange(String academicYear) {
+        int startYear;
+        if (academicYear == null || academicYear.isBlank()) {
+            LocalDate today = LocalDate.now();
+            startYear = today.getMonthValue() >= 5 ? today.getYear() : today.getYear() - 1;
+        } else {
+            String normalized = academicYear.trim();
+            if (!normalized.matches("\\d{4}-\\d{2}")) {
+                throw new IllegalArgumentException("Academic year must be in format YYYY-YY, for example 2026-27.");
+            }
+            startYear = Integer.parseInt(normalized.substring(0, 4));
+        }
+        LocalDateTime start = LocalDate.of(startYear, 5, 1).atStartOfDay();
+        LocalDateTime end = LocalDate.of(startYear + 1, 5, 1).atStartOfDay();
+        return new AcademicYearRange(start, end, startYear + "-" + String.valueOf(startYear + 1).substring(2));
+    }
+
+    private record AcademicYearRange(LocalDateTime start, LocalDateTime end, String label) {
+    }
+
     private EventParticipantReportRow participantRow(Registration registration, Map<Long, Result> studentResults, Map<Long, Result> teamResults) {
         Student student = registration.getStudent();
         Team team = registration.getTeam();
@@ -353,6 +424,16 @@ public class ReportDataService {
                 point.getPoints(),
                 point.getReason(),
                 point.getCreatedAt()
+        );
+    }
+
+    private EventMediaReportRow mediaRow(EventMedia item) {
+        return new EventMediaReportRow(
+                item.getMediaType(),
+                item.getCaption(),
+                item.getOriginalFileName(),
+                item.getContentType(),
+                mediaDir.resolve(item.getStoredFileName()).normalize().toString()
         );
     }
 

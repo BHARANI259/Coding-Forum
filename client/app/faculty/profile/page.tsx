@@ -11,7 +11,7 @@ import Input from "@/components/ui/Input";
 import PageHeader from "@/components/ui/PageHeader";
 import RoleBadge from "@/components/ui/RoleBadge";
 import StatCard from "@/components/ui/StatCard";
-import { getFacultyDepartmentSummary, getFacultyEvents, getFacultyProfile, updateFacultyProfile, type EventItem, type FacultyDepartmentSummary, type FacultyProfile } from "@/lib/api";
+import { changePassword, getFacultyDepartmentSummary, getFacultyEvents, getFacultyProfile, updateFacultyProfile, type EventItem, type FacultyDepartmentSummary, type FacultyProfile } from "@/lib/api";
 import { getCurrentUser, updateStoredUser } from "@/lib/auth";
 
 export default function FacultyProfilePage() {
@@ -22,6 +22,8 @@ export default function FacultyProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -67,6 +69,26 @@ export default function FacultyProfilePage() {
     }
   }
 
+  async function handlePasswordChange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setError("New password and confirmation do not match.");
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      await changePassword(passwordForm.oldPassword, passwordForm.newPassword);
+      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      setSuccess("Password changed successfully.");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Unable to change password.");
+    } finally {
+      setPasswordSaving(false);
+    }
+  }
+
   return (
     <AppShell expectedRole="FACULTY" title="Profile">
       <PageHeader title="Profile" subtitle="Faculty portal account and assigned-event overview." actions={<BackButton fallbackHref="/faculty/dashboard" />} />
@@ -100,6 +122,18 @@ export default function FacultyProfilePage() {
           <StatCard label="Department Points" value={summary?.departmentTotalPoints ?? "-"} hint={summary?.departmentCode ?? "Monitoring not enabled"} />
         </div>
       </div>
+
+      <Card className="mt-6">
+        <h2 className="text-lg font-bold text-kec-text">Change Password</h2>
+        <form className="mt-4 grid gap-4 sm:grid-cols-3" onSubmit={handlePasswordChange}>
+          <Input label="Current Password" type="password" autoComplete="current-password" value={passwordForm.oldPassword} onChange={(event) => setPasswordForm({ ...passwordForm, oldPassword: event.target.value })} required />
+          <Input label="New Password" type="password" autoComplete="new-password" value={passwordForm.newPassword} onChange={(event) => setPasswordForm({ ...passwordForm, newPassword: event.target.value })} required />
+          <Input label="Confirm Password" type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })} required />
+          <div className="sm:col-span-3">
+            <Button type="submit" loading={passwordSaving}>Change Password</Button>
+          </div>
+        </form>
+      </Card>
 
       <section className="mt-6 space-y-3">
         <h2 className="text-lg font-bold text-kec-text">Assigned Events</h2>

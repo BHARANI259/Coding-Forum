@@ -29,6 +29,14 @@ export default function RoleLoginForm({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [exiting, setExiting] = useState(false);
+
+  function redirectWithFade(path: string) {
+    setExiting(true);
+    window.setTimeout(() => {
+      router.push(path);
+    }, 220);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,60 +53,37 @@ export default function RoleLoginForm({
 
       if (user.firstLoginRequired) {
         setPostPasswordRedirect(redirectPath);
-        router.push("/auth/change-password");
+        redirectWithFade("/auth/change-password");
         return;
       }
 
-      router.push(redirectPath);
+      redirectWithFade(redirectPath);
     } catch (caught) {
+      setExiting(false);
       setError(caught instanceof Error ? caught.message : "Login failed. Please try again.");
-    } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-kec-bg px-4 py-6 sm:px-6 lg:py-10">
-      <section className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl overflow-hidden rounded-xl border border-kec-border bg-white shadow-sm lg:grid-cols-[1fr_420px]">
-        <div className="future-image-slot hidden flex-col justify-between border-r border-kec-border bg-white p-8 lg:flex">
-          <Link href="/" className="text-sm font-semibold text-kec-purple hover:text-kec-purpleHover">
-            Back to portal selection
-          </Link>
+    <main className="auth-login-page">
+      <section className={exiting ? "auth-login-card auth-login-card-exit" : "auth-login-card"}>
+        <Link href="/" className="auth-login-back">
+          Back to portal selection
+        </Link>
 
-          <div className="my-12">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-kec-purple">
-              Kongu Engineering College
-            </p>
-            <h1 className="max-w-xl text-3xl font-bold text-kec-text sm:text-4xl">
-              Coding Forum Portal
-            </h1>
-            <p className="mt-3 max-w-md text-sm text-kec-secondary">
-              Academic event registration and student performance access.
-            </p>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-kec-border bg-white">
-            <img
-              src="/logo.jpeg"
-              alt="Kongu Engineering College logo"
-              className="h-56 w-full object-contain p-6"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center p-6 sm:p-8">
-          <form onSubmit={handleSubmit} className="w-full">
-            <div className="mb-6 flex items-center justify-between gap-3">
-              <Link href="/" className="text-sm font-semibold text-kec-purple hover:text-kec-purpleHover lg:hidden">
-                Back
-              </Link>
+        <form onSubmit={handleSubmit} className="w-full">
+          <div className="text-center">
+            <h1 className="text-2xl font-extrabold text-kec-text sm:text-3xl">KEC Coding Forum</h1>
+            <div className="mt-5 flex justify-center">
               <RoleBadge role={roleLabel} />
             </div>
-            <h2 className="text-2xl font-bold text-kec-text">{title}</h2>
+            <h2 className="mt-4 text-2xl font-bold text-kec-text">{title}</h2>
             <p className="mt-2 text-sm text-kec-secondary">{subtitle}</p>
+          </div>
 
-            <div className="mt-8 space-y-5">
-              <Input
+          <div className="mt-8 space-y-5">
+            <Input
               label="Email"
               id="email"
               type="email"
@@ -108,7 +93,7 @@ export default function RoleLoginForm({
               onChange={(event) => setEmail(event.target.value)}
             />
 
-              <Input
+            <Input
               label="Password"
               id="password"
               type="password"
@@ -117,23 +102,22 @@ export default function RoleLoginForm({
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
+          </div>
+
+          {error ? (
+            <div className="mt-5 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
             </div>
+          ) : null}
 
-            {error ? (
-              <div className="mt-5 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error}
-              </div>
-            ) : null}
-
-            <Button
-              type="submit"
-              loading={submitting}
-              className="mt-6 w-full"
-            >
-              Sign in
-            </Button>
-          </form>
-        </div>
+          <Button
+            type="submit"
+            loading={submitting}
+            className="mt-6 w-full"
+          >
+            Sign in
+          </Button>
+        </form>
       </section>
     </main>
   );

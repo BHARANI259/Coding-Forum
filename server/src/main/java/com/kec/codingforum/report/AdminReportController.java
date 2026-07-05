@@ -83,6 +83,12 @@ public class AdminReportController {
         return excel("college-leaderboard.xlsx", excelService.collegeLeaderboard(dataService.getCollegeLeaderboardRows(departmentId, categoryId, fromDate, toDate)));
     }
 
+    @GetMapping("/yearly/pdf")
+    public ResponseEntity<byte[]> yearlyPdf(@RequestParam(required = false) String academicYear) {
+        String label = academicYear == null || academicYear.isBlank() ? dataService.currentAcademicYearLabel() : academicYear.trim();
+        return pdf("yearly-report-" + label + ".pdf", pdfService.yearlyEventReport(dataService.getYearlyEventReportData(label), label));
+    }
+
     private ResponseEntity<byte[]> pdf(String filename, byte[] body) {
         return file(filename, MediaType.APPLICATION_PDF, body);
     }

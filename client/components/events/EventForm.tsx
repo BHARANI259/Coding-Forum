@@ -330,7 +330,7 @@ export default function EventForm({ mode, event }: EventFormProps) {
         <h2 className="text-base font-bold text-kec-text">Restrictions</h2>
         <div className="mt-4 space-y-4">
           <Checklist title="Allowed Departments" items={departments.map((department) => ({ id: department.id, label: department.code }))} selected={form.allowedDepartmentIds} onToggle={(id) => toggleNumber("allowedDepartmentIds", id)} emptyLabel="No departments found." />
-          <Checklist title="Allowed Years" items={[1, 2, 3, 4].map((year) => ({ id: year, label: `Year ${year}` }))} selected={form.allowedYears} onToggle={(id) => toggleNumber("allowedYears", id)} />
+          <Checklist title="Allowed Years" items={[1, 2, 3, 4, 5].map((year) => ({ id: year, label: `Year ${year}` }))} selected={form.allowedYears} onToggle={(id) => toggleNumber("allowedYears", id)} />
           <TextChecklist title="Allowed Technical Areas" items={["SOFTWARE", "HARDWARE"]} selected={form.allowedTechnicalAreas} onToggle={(value) => toggleText("allowedTechnicalAreas", value)} />
           <Input label="Allowed Sections" helperText="Comma separated, for example A,B,C. Leave empty for all sections." value={form.allowedSections} onChange={(e) => setForm({ ...form, allowedSections: e.target.value })} />
           <label className="flex items-center gap-2 text-sm font-semibold text-kec-text">

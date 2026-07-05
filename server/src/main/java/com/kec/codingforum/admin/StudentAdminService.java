@@ -98,8 +98,9 @@ public class StudentAdminService {
             throw new IllegalArgumentException("Email already exists.");
         }
         Integer effectiveYear = studentYearService.resolveYear(normalizedRegisterNumber, year);
-        if (effectiveYear == null || effectiveYear < 1 || effectiveYear > 4) {
-            throw new IllegalArgumentException("Year must be between 1 and 4.");
+        int maxCourseYears = studentYearService.courseDuration(normalizedRegisterNumber);
+        if (effectiveYear == null || effectiveYear < 1 || effectiveYear > maxCourseYears) {
+            throw new IllegalArgumentException("Year must be between 1 and " + maxCourseYears + " for this course.");
         }
 
         Department department = departments.findById(departmentId)

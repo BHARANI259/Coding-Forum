@@ -16,6 +16,7 @@ import {
   downloadAdminEventResultsExcel,
   downloadAdminEventStudentsExcel,
   downloadAdminEventTeamsExcel,
+  downloadAdminYearlyReportPdf,
   getAdminEvents,
   getDepartments,
   getEventCategories,
@@ -34,6 +35,7 @@ export default function AdminReportsPage() {
   const [leaderboardDepartmentId, setLeaderboardDepartmentId] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [academicYear, setAcademicYear] = useState(currentAcademicYearLabel());
   const [downloading, setDownloading] = useState("");
   const [error, setError] = useState("");
 
@@ -127,7 +129,22 @@ export default function AdminReportsPage() {
             <Button type="button" loading={downloading === "leaderboard"} onClick={() => void runDownload("leaderboard", () => downloadAdminCollegeLeaderboardExcel(leaderboardFilters))}>College Leaderboard Excel</Button>
           </div>
         </Card>
+
+        <Card>
+          <h2 className="text-base font-bold text-kec-text">Yearly Report</h2>
+          <p className="mt-2 text-sm text-kec-secondary">Best used in April after club and cell activities are completed for the academic year.</p>
+          <div className="mt-4 space-y-3">
+            <Input label="Academic Year" value={academicYear} onChange={(event) => setAcademicYear(event.target.value)} helperText="Format: 2026-27. Academic year runs May to April." />
+            <Button type="button" loading={downloading === "yearly"} onClick={() => void runDownload("yearly", () => downloadAdminYearlyReportPdf(academicYear))}>Yearly PDF Report</Button>
+          </div>
+        </Card>
       </div>
     </AppShell>
   );
+}
+
+function currentAcademicYearLabel() {
+  const now = new Date();
+  const startYear = now.getMonth() + 1 >= 5 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${startYear}-${String(startYear + 1).slice(-2)}`;
 }

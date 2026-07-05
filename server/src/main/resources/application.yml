@@ -32,7 +32,7 @@ server:
 
 app:
   cors:
-    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000,http://127.0.0.1:3000}
   jwt:
     secret: ${JWT_SECRET:dev-only-auth-secret-change-me-please-32-bytes-minimum}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:120}

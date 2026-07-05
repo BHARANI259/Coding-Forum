@@ -165,7 +165,7 @@ export default function AdminStudentsPage() {
               </Select>
               <div className="grid grid-cols-2 gap-3">
                 <Select label="Year" name="year" value={form.year} onChange={updateForm}>
-                  {[1, 2, 3, 4].map((year) => <option key={year} value={year}>{year}</option>)}
+                  {[1, 2, 3, 4, 5].map((year) => <option key={year} value={year}>{year}</option>)}
                 </Select>
                 <Input label="Section" name="section" value={form.section} onChange={updateForm} />
               </div>
@@ -212,7 +212,7 @@ export default function AdminStudentsPage() {
               </Select>
               <Select label="Year" value={filters.year} onChange={(event) => setFilters({ ...filters, year: event.target.value })}>
                 <option value="">All</option>
-                {[1, 2, 3, 4].map((year) => <option key={year} value={year}>{year}</option>)}
+                {[1, 2, 3, 4, 5].map((year) => <option key={year} value={year}>{year}</option>)}
               </Select>
               <Input label="Section" value={filters.section} onChange={(event) => setFilters({ ...filters, section: event.target.value })} />
               <Select label="Technical Area" value={filters.technicalArea} onChange={(event) => setFilters({ ...filters, technicalArea: event.target.value })}>

@@ -699,7 +699,7 @@ export async function apiFetch<T>(
       headers
     });
   } catch {
-    throw new Error("Cannot reach the backend server. Please make sure Spring Boot is running on port 8080.");
+    throw new Error(`Cannot reach the backend server at ${API_BASE_URL}. Please make sure Spring Boot is running and the frontend origin is allowed.`);
   }
 
   if (!response.ok) {
@@ -1327,6 +1327,10 @@ export function downloadAdminDepartmentStudentsExcel(departmentId: number, filte
 
 export function downloadAdminCollegeLeaderboardExcel(filters: Record<string, string | number | boolean | undefined> = {}) {
   return downloadFile(`/admin/reports/leaderboard/college.xlsx${toQuery(filters)}`, "college-leaderboard.xlsx");
+}
+
+export function downloadAdminYearlyReportPdf(academicYear?: string) {
+  return downloadFile(`/admin/reports/yearly/pdf${toQuery({ academicYear })}`, `yearly-report-${academicYear || "current"}.pdf`);
 }
 
 export function downloadFacultyEventPdf(eventId: number) {

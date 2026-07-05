@@ -37,7 +37,8 @@ public final class ReportModels {
             List<EventParticipantReportRow> participants,
             List<EventTeamReportRow> teams,
             List<EventResultReportRow> results,
-            List<DepartmentSummaryRow> departmentSummary
+            List<DepartmentSummaryRow> departmentSummary,
+            List<EventMediaReportRow> media
     ) {
     }
 
@@ -114,6 +115,15 @@ public final class ReportModels {
             Integer points,
             String reason,
             LocalDateTime createdAt
+    ) {
+    }
+
+    public record EventMediaReportRow(
+            String mediaType,
+            String caption,
+            String originalFileName,
+            String contentType,
+            String filePath
     ) {
     }
 
