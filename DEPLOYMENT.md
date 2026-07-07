@@ -37,6 +37,7 @@ DB_PORT
 DB_NAME
 DB_USER
 DB_PASSWORD
+JDBC_DATABASE_URL
 JWT_SECRET
 JWT_EXPIRATION_MINUTES
 FRONTEND_ORIGIN
@@ -63,6 +64,16 @@ For multiple local origins during development:
 ```text
 http://localhost:3000,http://127.0.0.1:3000
 ```
+
+For Neon or other hosted PostgreSQL databases, prefer:
+
+```text
+JDBC_DATABASE_URL=jdbc:postgresql://your-host/your-db?sslmode=require
+DB_USER=your-provider-user
+DB_PASSWORD=your-provider-password
+```
+
+If `JDBC_DATABASE_URL` is set, it overrides the composed local URL built from `DB_HOST`, `DB_PORT`, and `DB_NAME`.
 
 ### Upload Storage
 
