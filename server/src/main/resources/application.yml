@@ -3,8 +3,8 @@ spring:
     name: kec-coding-forum
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:kec_coding_forum}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:dharsini@3031}
+    username: ${DB_USER:kec_forum_app}
+    password: ${DB_PASSWORD:kec_forum_pass}
   jpa:
     hibernate:
       ddl-auto: validate

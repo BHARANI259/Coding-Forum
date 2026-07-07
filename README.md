@@ -1,61 +1,57 @@
-# kec-coding-forum
+# KEC Coding Forum
 
-Kongu Engineering College Coding Forum monorepo.
+Kongu Engineering College Coding Forum is a role-based academic event management portal for coding forum events, registrations, teams, rounds, results, points, leaderboards, analytics, reports, notifications, and post-event archive media.
 
-## Tech Stack
+## Stack
 
-- Backend: Java 21, Spring Boot, Spring Web, Spring Security, Spring Data JPA, Flyway, PostgreSQL
-- Frontend: Next.js, TypeScript, Tailwind CSS, App Router
-- Future utilities included: Apache POI for Excel import, OpenPDF for PDF reports
+- Backend: Java 21, Spring Boot, Spring Security, Spring Data JPA, Flyway, PostgreSQL
+- Frontend: Next.js App Router, React, TypeScript, Tailwind CSS, Recharts
+- Reports/files: OpenPDF, Apache POI, local upload storage
 
-## Structure
+## Folder Structure
 
 ```text
 kec-coding-forum/
-|-- server/
-|-- client/
-|-- README.md
-`-- .gitignore
+|-- client/          Next.js frontend
+|-- server/          Spring Boot backend
+|-- server/db/       PostgreSQL setup helper
+|-- server/uploads/  Local development uploads
+`-- BLOCK_*          Block implementation summaries
 ```
 
 ## Prerequisites
 
 - Java 21
-- Maven or the generated Maven wrapper
-- Node.js and npm
-- PostgreSQL
+- Node.js 20+ and npm
+- PostgreSQL 14+
+- PowerShell or a compatible shell
 
 ## Database Setup
 
-Default backend connection:
-
-```text
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=kec_coding_forum
-DB_USER=postgres
-DB_PASSWORD=dharsini@3031
-```
-
-Create the database and app user:
+Create the local database and application user:
 
 ```powershell
 psql -h localhost -U postgres -d postgres -f server/db/postgres_setup.sql
 ```
 
-To reset the database during development:
+Default local database values match `server/db/postgres_setup.sql`:
 
-```sql
-DROP DATABASE IF EXISTS kec_coding_forum;
+```text
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=kec_coding_forum
+DB_USER=kec_forum_app
+DB_PASSWORD=kec_forum_pass
 ```
 
-Then rerun `server/db/postgres_setup.sql` and start the backend so Flyway reapplies migrations.
+Flyway runs automatically on backend startup. Hibernate is configured with `ddl-auto=validate`, so schema changes must be handled through migrations.
 
-## Backend
+## Backend Setup
 
 ```powershell
 cd server
-.\mvnw.cmd clean compile
+copy .env.example .env
+.\mvnw.cmd clean compile -DskipTests
 .\mvnw.cmd spring-boot:run
 ```
 
@@ -65,18 +61,48 @@ Health check:
 GET http://localhost:8080/api/health
 ```
 
-## Frontend
+Important backend environment variables:
+
+```text
+DB_HOST
+DB_PORT
+DB_NAME
+DB_USER
+DB_PASSWORD
+JWT_SECRET
+JWT_EXPIRATION_MINUTES
+FRONTEND_ORIGIN
+UPLOAD_ROOT_DIR
+EVENT_POSTERS_DIR
+EVENT_MEDIA_DIR
+NOTIFICATION_EMAIL_ENABLED
+NOTIFICATION_WEBSOCKET_ENABLED
+MAIL_HOST
+MAIL_PORT
+MAIL_USERNAME
+MAIL_PASSWORD
+```
+
+## Frontend Setup
 
 ```powershell
 cd client
+copy .env.local.example .env.local
 npm install
+npm exec tsc -- --noEmit
 npm run build
 npm run dev
 ```
 
+Frontend environment:
+
+```text
+NEXT_PUBLIC_API_URL=http://localhost:8080/api
+```
+
 ## Development Login Accounts
 
-Seeded development-only accounts:
+These accounts are seeded for local development/demo only:
 
 ```text
 SuperAdmin
@@ -92,36 +118,48 @@ Email: faculty@kongu.edu
 Password: bharani@2007
 ```
 
-All three are seeded through Flyway with BCrypt password hashes. They are for local development only.
+Change production passwords immediately after deployment.
 
-## Authentication Routes
-
-Frontend portal routes:
+## Main Routes
 
 ```text
-/auth/student/login
-/auth/faculty/login
 /auth/admin/login
-/auth/change-password
+/auth/faculty/login
+/auth/student/login
+/admin/dashboard
+/admin/events
+/admin/analytics
+/faculty/dashboard
+/faculty/events
+/student/dashboard
+/student/events
 ```
 
-Backend authentication endpoints:
+## Build Commands
 
-```text
-POST /api/auth/student/login
-POST /api/auth/faculty/login
-POST /api/auth/admin/login
-GET  /api/auth/me
-POST /api/auth/change-password
+Backend:
+
+```powershell
+cd server
+.\mvnw.cmd clean compile -DskipTests
+.\mvnw.cmd test
 ```
 
-Each login endpoint validates both credentials and the selected portal role.
+Frontend:
 
-## Block Roadmap
+```powershell
+cd client
+npm exec tsc -- --noEmit
+npm run build
+npm run lint
+```
 
-1. New project foundation, schema, seed data, health endpoint, frontend shell
-2. Authentication and first-login password flow
-3. SuperAdmin user creation/import
-4. Team creation and join code flow
-5. Event management, constraints, registration, and result tagging
-6. Points and leaderboard
+## Deployment Notes
+
+- Use environment variables for database credentials, JWT secret, CORS origin, SMTP, and upload paths.
+- Do not commit `.env`, `.env.local`, generated uploads, or production secrets.
+- Ensure the upload root is persistent on the backend host.
+- Set `FRONTEND_ORIGIN` to the deployed frontend URL.
+- Set `NEXT_PUBLIC_API_URL` to the deployed backend `/api` base URL.
+
+See `DEPLOYMENT.md`, `HANDOVER.md`, and `DEMO_SCRIPT.md` for deployment and review guidance.

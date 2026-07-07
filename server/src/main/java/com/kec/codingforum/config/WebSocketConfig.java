@@ -7,20 +7,25 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
+import java.util.Arrays;
+
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final NotificationWebSocketHandler notificationWebSocketHandler;
-    private final String allowedOrigin;
+    private final String[] allowedOrigins;
 
-    public WebSocketConfig(NotificationWebSocketHandler notificationWebSocketHandler, @Value("${app.cors.allowed-origin:http://localhost:3000}") String allowedOrigin) {
+    public WebSocketConfig(NotificationWebSocketHandler notificationWebSocketHandler, @Value("${app.cors.allowed-origin:http://localhost:3000,http://127.0.0.1:3000}") String allowedOrigin) {
         this.notificationWebSocketHandler = notificationWebSocketHandler;
-        this.allowedOrigin = allowedOrigin;
+        this.allowedOrigins = Arrays.stream(allowedOrigin.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .toArray(String[]::new);
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(notificationWebSocketHandler, "/ws").setAllowedOrigins(allowedOrigin);
+        registry.addHandler(notificationWebSocketHandler, "/ws").setAllowedOrigins(allowedOrigins);
     }
 }
