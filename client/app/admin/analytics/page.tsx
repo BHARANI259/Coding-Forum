@@ -87,6 +87,7 @@ export default function AdminAnalyticsPage() {
   const [eventEngagement, setEventEngagement] = useState<EventEngagementRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sectionErrors, setSectionErrors] = useState<Record<string, string>>({});
 
   const queryFilters = useMemo(() => toQueryFilters(appliedFilters), [appliedFilters]);
 
@@ -105,6 +106,7 @@ export default function AdminAnalyticsPage() {
     async function loadAnalytics() {
       setLoading(true);
       setError("");
+      setSectionErrors({});
       const results = await Promise.allSettled([
         getAdminAnalyticsSummary(),
         getDepartmentParticipation(queryFilters),
@@ -119,9 +121,32 @@ export default function AdminAnalyticsPage() {
         getEventEngagement({ ...queryFilters, limit: 10 })
       ]);
 
-      const rejected = results.find((result) => result.status === "rejected");
-      if (rejected?.status === "rejected") {
-        setError(rejected.reason instanceof Error ? rejected.reason.message : "Some analytics could not be loaded.");
+      const labels = [
+        "overview",
+        "departmentParticipation",
+        "departmentPoints",
+        "categoryParticipation",
+        "registrationTrend",
+        "resultDistribution",
+        "technicalAreaParticipation",
+        "eventStatusSummary",
+        "topStudents",
+        "topDepartments",
+        "eventEngagement"
+      ];
+      const nextSectionErrors: Record<string, string> = {};
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          nextSectionErrors[labels[index]] = result.reason instanceof Error ? result.reason.message : "This analytics section could not be loaded.";
+        }
+      });
+      setSectionErrors(nextSectionErrors);
+
+      const allRequestsFailed = results.every((result) => result.status === "rejected");
+      if (allRequestsFailed) {
+        setError("Analytics could not be loaded. Please check the backend server and refresh the page.");
+      } else if (results[0].status === "rejected") {
+        setError("Overview cards could not be loaded. The remaining analytics sections are still available.");
       }
 
       setOverview(valueOr(results[0], null));
@@ -218,8 +243,8 @@ export default function AdminAnalyticsPage() {
         <StatCard label="Points Awarded" value={overview?.totalPointsAwarded ?? 0} />
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <ChartCard title="Department-wise Participation" subtitle="Registrations and unique students by department." loading={loading} empty={!hasChartData(departmentParticipationRows, ["registrations", "students"])}>
+      <div className="mt-6 space-y-6">
+        <ChartCard title="Department-wise Participation" subtitle="Registrations and unique students by department." loading={loading} error={sectionErrors.departmentParticipation} empty={!hasChartData(departmentParticipationRows, ["registrations", "students"])}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={departmentParticipationRows}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -233,7 +258,7 @@ export default function AdminAnalyticsPage() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Department-wise Points" subtitle="Performance from student_points." loading={loading} empty={!hasChartData(departmentPointsRows, ["points", "wins"])}>
+        <ChartCard title="Department-wise Points" subtitle="Performance from student_points." loading={loading} error={sectionErrors.departmentPoints} empty={!hasChartData(departmentPointsRows, ["points", "wins"])}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={departmentPointsRows}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -247,11 +272,11 @@ export default function AdminAnalyticsPage() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Event Category Participation" subtitle="Which event categories attract registrations." loading={loading} empty={!hasPieData(categoryRows)}>
+        <ChartCard title="Event Category Participation" subtitle="Which event categories attract registrations." loading={loading} error={sectionErrors.categoryParticipation} empty={!hasPieData(categoryRows)}>
           <PiePanel data={categoryRows} />
         </ChartCard>
 
-        <ChartCard title="Registration Trend" subtitle="Daily registration activity. Defaults to the last 30 days." loading={loading} empty={!hasChartData(registrationTrend, ["registrationCount"])}>
+        <ChartCard title="Registration Trend" subtitle="Daily registration activity. Defaults to the last 30 days." loading={loading} error={sectionErrors.registrationTrend} empty={!hasChartData(registrationTrend, ["registrationCount"])}>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={registrationTrend}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -263,71 +288,75 @@ export default function AdminAnalyticsPage() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Result Distribution" subtitle="Final result tags across declared results." loading={loading} empty={!hasPieData(resultRows)}>
+        <ChartCard title="Result Distribution" subtitle="Final result tags across declared results." loading={loading} error={sectionErrors.resultDistribution} empty={!hasPieData(resultRows)}>
           <PiePanel data={resultRows} />
         </ChartCard>
 
-        <ChartCard title="Software vs Hardware Participation" subtitle="Participation split by student technical area." loading={loading} empty={!hasPieData(technicalRows)}>
+        <ChartCard title="Software vs Hardware Participation" subtitle="Participation split by student technical area." loading={loading} error={sectionErrors.technicalAreaParticipation} empty={!hasPieData(technicalRows)}>
           <PiePanel data={technicalRows} />
         </ChartCard>
 
-        <ChartCard title="Event Status Summary" subtitle="Current event lifecycle status." loading={loading} empty={!hasPieData(statusRows)}>
+        <ChartCard title="Event Status Summary" subtitle="Current event lifecycle status." loading={loading} error={sectionErrors.eventStatusSummary} empty={!hasPieData(statusRows)}>
           <PiePanel data={statusRows} />
         </ChartCard>
 
-        <ChartCard title="Event Engagement" subtitle="Events with the highest registration activity." loading={loading} empty={eventEngagement.length === 0}>
-          <DataTable
-            headers={["Event", "Category", "Type", "Registrations", "Teams", "Results"]}
-            rows={eventEngagement.map((row) => [
-              row.eventTitle,
-              row.categoryName,
-              row.eventType,
-              row.registrationCount,
-              row.teamCount,
-              row.resultsPublished ? "Published" : "Pending"
-            ])}
-            emptyMessage="No event engagement data."
-          />
-        </ChartCard>
-      </div>
-
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <ChartCard title="Top Students" subtitle="Highest scoring students from live point data." loading={loading} empty={topStudents.length === 0}>
-          <DataTable
-            headers={["Rank", "Student", "Register No", "Dept", "Area", "Points", "Events", "Wins"]}
-            rows={topStudents.map((row) => [
-              row.rank,
-              row.studentName,
-              row.registerNumber,
-              row.departmentCode ?? "-",
-              row.technicalArea,
-              row.totalPoints,
-              row.eventsParticipated,
-              row.wins
-            ])}
-            emptyMessage="No top student data."
-          />
+        <ChartCard title="Event Engagement" subtitle="Events with the highest registration activity." loading={loading} error={sectionErrors.eventEngagement} empty={eventEngagement.length === 0}>
+          <ScrollableTable>
+            <DataTable
+              headers={["Event", "Category", "Type", "Registrations", "Teams", "Results"]}
+              rows={eventEngagement.map((row) => [
+                row.eventTitle,
+                row.categoryName,
+                row.eventType,
+                row.registrationCount,
+                row.teamCount,
+                row.resultsPublished ? "Published" : "Pending"
+              ])}
+              emptyMessage="No event engagement data."
+            />
+          </ScrollableTable>
         </ChartCard>
 
-        <ChartCard title="Top Departments" subtitle="Department ranking by points, participation, and wins." loading={loading} empty={topDepartments.length === 0}>
-          <DataTable
-            headers={["Rank", "Department", "Points", "Participations", "Wins"]}
-            rows={topDepartments.map((row) => [
-              row.rank,
-              `${row.departmentCode} - ${row.departmentName}`,
-              row.totalPoints,
-              row.participationCount,
-              row.wins
-            ])}
-            emptyMessage="No top department data."
-          />
+        <ChartCard title="Top Students" subtitle="Highest scoring students from live point data." loading={loading} error={sectionErrors.topStudents} empty={topStudents.length === 0}>
+          <ScrollableTable>
+            <DataTable
+              headers={["Rank", "Student", "Register No", "Dept", "Area", "Points", "Events", "Wins"]}
+              rows={topStudents.map((row) => [
+                row.rank,
+                row.studentName,
+                row.registerNumber,
+                row.departmentCode ?? "-",
+                row.technicalArea,
+                row.totalPoints,
+                row.eventsParticipated,
+                row.wins
+              ])}
+              emptyMessage="No top student data."
+            />
+          </ScrollableTable>
+        </ChartCard>
+
+        <ChartCard title="Top Departments" subtitle="Department ranking by points, participation, and wins." loading={loading} error={sectionErrors.topDepartments} empty={topDepartments.length === 0}>
+          <ScrollableTable>
+            <DataTable
+              headers={["Rank", "Department", "Points", "Participations", "Wins"]}
+              rows={topDepartments.map((row) => [
+                row.rank,
+                `${row.departmentCode} - ${row.departmentName}`,
+                row.totalPoints,
+                row.participationCount,
+                row.wins
+              ])}
+              emptyMessage="No top department data."
+            />
+          </ScrollableTable>
         </ChartCard>
       </div>
     </AppShell>
   );
 }
 
-function ChartCard({ title, subtitle, loading, empty, children }: { title: string; subtitle: string; loading: boolean; empty: boolean; children: React.ReactNode }) {
+function ChartCard({ title, subtitle, loading, error, empty, children }: { title: string; subtitle: string; loading: boolean; error?: string; empty: boolean; children: React.ReactNode }) {
   return (
     <Card>
       <div className="mb-4">
@@ -336,10 +365,20 @@ function ChartCard({ title, subtitle, loading, empty, children }: { title: strin
       </div>
       {loading ? (
         <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed border-kec-border text-sm text-kec-muted">Loading analytics...</div>
+      ) : error ? (
+        <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-4 text-center text-sm text-amber-800">{error}</div>
       ) : empty ? (
         <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed border-kec-border px-4 text-center text-sm text-kec-muted">No data available for the selected filters.</div>
       ) : children}
     </Card>
+  );
+}
+
+function ScrollableTable({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="max-h-[250px] overflow-auto rounded-xl border border-kec-border">
+      {children}
+    </div>
   );
 }
 

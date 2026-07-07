@@ -675,6 +675,12 @@ type ApiError = {
   message?: string;
 };
 
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -693,13 +699,27 @@ export async function apiFetch<T>(
   }
 
   let response: Response;
+  const url = `${API_BASE_URL}${endpoint}`;
+  const method = options.method?.toUpperCase() ?? "GET";
   try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    response = await fetch(url, {
       ...options,
       headers
     });
   } catch {
-    throw new Error(`Cannot reach the backend server at ${API_BASE_URL}. Please make sure Spring Boot is running and the frontend origin is allowed.`);
+    if (method === "GET") {
+      await wait(300);
+      try {
+        response = await fetch(url, {
+          ...options,
+          headers
+        });
+      } catch {
+        throw new Error(`Cannot reach backend endpoint ${url}. Spring Boot is reachable only if this exact API path exists and CORS allows http://localhost:3000.`);
+      }
+    } else {
+      throw new Error(`Cannot reach backend endpoint ${url}. Spring Boot is reachable only if this exact API path exists and CORS allows http://localhost:3000.`);
+    }
   }
 
   if (!response.ok) {

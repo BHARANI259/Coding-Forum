@@ -28,21 +28,41 @@ export default function AdminDashboardShell() {
 
   useEffect(() => {
     async function load() {
-      const academicYear = currentAcademicYearRange();
-      try {
-        const [analytics, departments, students, events] = await Promise.all([
-          getAdminAnalyticsOverview(),
-          getTopDepartments({ limit: 5 }),
-          getTopStudents({ limit: 5 }),
-          getEventEngagement({ limit: 5, fromDate: academicYear.fromDate, toDate: academicYear.toDate })
-        ]);
-        setSummary(analytics);
-        setTopDepartments(departments);
-        setTopStudents(students);
-        setEventEngagement(events);
-      } catch (exception) {
-        setError(exception instanceof Error ? exception.message : "Unable to load admin analytics.");
+      const results = await Promise.allSettled([
+        getAdminAnalyticsOverview(),
+        getTopDepartments({ limit: 5 }),
+        getTopStudents({ limit: 5 }),
+        getEventEngagement({ limit: 5 })
+      ]);
+
+      const [analytics, departments, students, events] = results;
+      const failures: string[] = [];
+
+      if (analytics.status === "fulfilled") {
+        setSummary(analytics.value);
+      } else {
+        failures.push(`Overview: ${messageFromRejection(analytics.reason)}`);
       }
+
+      if (departments.status === "fulfilled") {
+        setTopDepartments(departments.value);
+      } else {
+        failures.push(`Top departments: ${messageFromRejection(departments.reason)}`);
+      }
+
+      if (students.status === "fulfilled") {
+        setTopStudents(students.value);
+      } else {
+        failures.push(`Top students: ${messageFromRejection(students.reason)}`);
+      }
+
+      if (events.status === "fulfilled") {
+        setEventEngagement(events.value);
+      } else {
+        setEventEngagement([]);
+      }
+
+      setError(failures.join(" "));
     }
     void load();
   }, []);
@@ -103,7 +123,7 @@ export default function AdminDashboardShell() {
         </Card>
         <Card>
           <h2 className="text-base font-bold text-kec-text">Event Engagement</h2>
-          <p className="mt-1 text-sm text-kec-secondary">Current academic year events with the most registrations.</p>
+          <p className="mt-1 text-sm text-kec-secondary">Events with the most registrations.</p>
           <div className="mt-4">
             <DataTable
               headers={["Event", "Category", "Registrations", "Teams"]}
@@ -122,11 +142,6 @@ export default function AdminDashboardShell() {
   );
 }
 
-function currentAcademicYearRange() {
-  const now = new Date();
-  const startYear = now.getMonth() + 1 >= 5 ? now.getFullYear() : now.getFullYear() - 1;
-  return {
-    fromDate: `${startYear}-05-01`,
-    toDate: `${startYear + 1}-04-30`
-  };
+function messageFromRejection(reason: unknown) {
+  return reason instanceof Error ? reason.message : "Unable to load this section.";
 }
