@@ -144,13 +144,13 @@ export default function AdminStudentsPage() {
   }
 
   return (
-    <AppShell expectedRole="SUPER_ADMIN" title="Students">
+    <AppShell expectedRole="SUPER_ADMIN" title="Students" fullWidth>
       <PageHeader title="Students" subtitle="Create student profiles, linked login accounts, and import student batches." actions={<BackButton fallbackHref="/admin/dashboard" />} />
 
       {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
 
-      <div className="grid gap-5 xl:grid-cols-[420px_1fr]">
-        <div className="space-y-5">
+      <div className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-5">
           <Card>
             <h2 className="text-base font-bold text-kec-text">Add Student</h2>
             <form className="mt-4 space-y-4" onSubmit={handleCreate}>
@@ -201,7 +201,7 @@ export default function AdminStudentsPage() {
           </Card>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Card>
             <h2 className="text-base font-bold text-kec-text">Filters</h2>
             <div className="mt-4 grid gap-3 md:grid-cols-3">

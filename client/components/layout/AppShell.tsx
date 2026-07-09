@@ -13,9 +13,10 @@ type AppShellProps = {
   expectedRole: UserRole;
   title: string;
   children: ReactNode;
+  fullWidth?: boolean;
 };
 
-export default function AppShell({ expectedRole, title, children }: AppShellProps) {
+export default function AppShell({ expectedRole, title, children, fullWidth = false }: AppShellProps) {
   const router = useRouter();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -79,7 +80,7 @@ export default function AppShell({ expectedRole, title, children }: AppShellProp
           title={title}
           onMenuClick={() => setMobileOpen(true)}
         />
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className={fullWidth ? "w-full px-4 py-6 sm:px-6 lg:px-8" : "mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"}>{children}</main>
       </div>
     </div>
   );
