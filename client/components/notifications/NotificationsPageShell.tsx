@@ -107,9 +107,9 @@ export default function NotificationsPageShell({ role, fallbackHref }: Notificat
           </Select>
           <Select label="Type" value={type} onChange={(event) => setType(event.target.value)}>
             <option value="">All types</option>
-            {TYPES.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}
+            {TYPES.map((item) => <option key={item} value={item}>{friendlyType(item)}</option>)}
           </Select>
-          <Button type="button" variant="secondary" loading={saving} onClick={() => void handleMarkAllRead()}>
+          <Button type="button" className="w-full md:w-auto" variant="secondary" loading={saving} disabled={!items.some((item) => !item.read)} onClick={() => void handleMarkAllRead()}>
             Mark all as read
           </Button>
         </div>
@@ -125,16 +125,16 @@ export default function NotificationsPageShell({ role, fallbackHref }: Notificat
             onClick={() => void openItem(item)}
             className={`w-full rounded-xl border p-4 text-left shadow-sm transition hover:border-kec-purple ${item.read ? "border-kec-border bg-white" : "border-purple-200 bg-purple-50"}`}
           >
-            <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                   {!item.read ? <span className="h-2.5 w-2.5 rounded-full bg-kec-purple" /> : null}
-                  <h2 className="truncate text-base font-bold text-kec-text">{item.title}</h2>
+                  <h2 className="min-w-0 break-words text-base font-bold text-kec-text sm:truncate">{item.title}</h2>
                 </div>
-                <p className="mt-2 text-sm text-kec-secondary">{item.message}</p>
+                <p className="mt-2 break-words text-sm text-kec-secondary">{item.message}</p>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <Badge variant={item.read ? "default" : "purple"}>{item.notificationType.replaceAll("_", " ")}</Badge>
+              <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
+                <Badge variant={item.read ? "default" : "purple"}>{friendlyType(item.notificationType)}</Badge>
                 <span className="text-xs text-kec-muted">{shortTime(item.createdAt)}</span>
               </div>
             </div>
@@ -143,4 +143,8 @@ export default function NotificationsPageShell({ role, fallbackHref }: Notificat
       </div>
     </AppShell>
   );
+}
+
+function friendlyType(value: string) {
+  return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

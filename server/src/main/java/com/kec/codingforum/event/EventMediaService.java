@@ -84,6 +84,7 @@ public class EventMediaService {
     @Transactional
     public List<EventMediaDto> adminUpload(Long eventId, Long userId, List<MultipartFile> files, String mediaType, String caption) {
         Event event = findEvent(eventId);
+        assertNotCancelled(event);
         return upload(event, userId, files, mediaType, caption, true);
     }
 
@@ -98,6 +99,7 @@ public class EventMediaService {
 
     @Transactional
     public EventMediaDto adminUpdate(Long eventId, Long mediaId, UpdateEventMediaRequest request) {
+        assertNotCancelled(findEvent(eventId));
         EventMedia item = findMedia(eventId, mediaId, false);
         applyMetadata(item, request);
         return toDto(item, adminFileUrl(eventId, mediaId));
@@ -105,7 +107,8 @@ public class EventMediaService {
 
     @Transactional
     public EventMediaDto facultyUpdate(Long eventId, Long facultyId, Long userId, Long mediaId, UpdateEventMediaRequest request) {
-        requireAssigned(eventId, facultyId);
+        Event event = requireAssigned(eventId, facultyId);
+        assertNotCancelled(event);
         EventMedia item = findMedia(eventId, mediaId, false);
         requireOwner(item, userId);
         applyMetadata(item, request);
@@ -114,12 +117,14 @@ public class EventMediaService {
 
     @Transactional
     public void adminDelete(Long eventId, Long mediaId, Long userId) {
+        assertNotCancelled(findEvent(eventId));
         softDelete(findMedia(eventId, mediaId, false), userId);
     }
 
     @Transactional
     public void facultyDelete(Long eventId, Long facultyId, Long userId, Long mediaId) {
-        requireAssigned(eventId, facultyId);
+        Event event = requireAssigned(eventId, facultyId);
+        assertNotCancelled(event);
         EventMedia item = findMedia(eventId, mediaId, false);
         requireOwner(item, userId);
         softDelete(item, userId);
@@ -210,6 +215,12 @@ public class EventMediaService {
 
     private Event findEvent(Long eventId) {
         return events.findById(eventId).orElseThrow(() -> new IllegalArgumentException("Event not found."));
+    }
+
+    private void assertNotCancelled(Event event) {
+        if ("CANCELLED".equals(event.getStatus())) {
+            throw new IllegalArgumentException("Cancelled events are read-only.");
+        }
     }
 
     private Event requireAssigned(Long eventId, Long facultyId) {

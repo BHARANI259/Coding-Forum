@@ -1,6 +1,8 @@
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
 import EventPosterPreview from "@/components/events/EventPosterPreview";
+import { formatDateTime } from "@/lib/dateFormat";
+import { getEventRegistrationState } from "@/lib/eventRegistration";
 import type { EventDetail, EventItem } from "@/lib/api";
 
 type EventSummaryProps = {
@@ -8,36 +10,38 @@ type EventSummaryProps = {
 };
 
 export default function EventSummary({ event }: EventSummaryProps) {
+  const registrationState = getEventRegistrationState(event);
+
   return (
     <Card>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2 lg:gap-6">
         <EventPosterPreview
           posterImageUrl={event.posterImageUrl}
           title={event.title}
-          className="min-h-[320px] lg:min-h-full"
-          imageClassName="min-h-[320px] lg:min-h-full"
+          className="min-h-[220px] sm:min-h-[280px] lg:min-h-full"
+          imageClassName="min-h-[220px] sm:min-h-[280px] lg:min-h-full"
         />
         <div className="min-w-0">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-xl font-bold text-kec-text">{event.title}</h2>
+              <h2 className="break-words text-lg font-bold text-kec-text sm:text-xl">{event.title}</h2>
               <p className="mt-1 text-sm text-kec-secondary">{event.category?.name ?? "Uncategorized"} - {event.venue ?? "Venue not set"}</p>
               {event.posterOriginalName ? (
                 <p className="mt-2 text-xs font-semibold text-kec-muted">Poster: {event.posterOriginalName}</p>
               ) : null}
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="purple">{event.eventType}</Badge>
-              <Badge variant={event.registrationOpen ? "success" : "warning"}>{event.registrationOpen ? "Registration Open" : "Registration Closed"}</Badge>
+            <div className="flex max-w-full flex-wrap gap-2">
+              <Badge variant="purple">{event.eventType === "TEAM" ? "Team" : "Individual"}</Badge>
+              <Badge variant={registrationState.badgeVariant}>{registrationState.label}</Badge>
               <Badge variant={event.resultsPublished ? "success" : "default"}>{event.resultsPublished ? "Results Published" : "Results Pending"}</Badge>
-              <Badge variant={event.status === "CANCELLED" ? "error" : "info"}>{event.status}</Badge>
+              <Badge variant={event.status === "CANCELLED" ? "error" : event.status === "COMPLETED" ? "success" : "info"}>{humanize(event.status)}</Badge>
             </div>
           </div>
 
           {"description" in event && event.description ? (
             <div className="mt-5 rounded-xl border border-kec-border bg-kec-bg px-4 py-3">
               <p className="text-xs font-semibold uppercase text-kec-muted">Description</p>
-              <p className="mt-2 text-sm leading-6 text-kec-text">{event.description}</p>
+              <p className="mt-2 break-words text-sm leading-6 text-kec-text">{event.description}</p>
             </div>
           ) : null}
 
@@ -69,18 +73,19 @@ export default function EventSummary({ event }: EventSummaryProps) {
   );
 }
 
+function humanize(value: string) {
+  return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function Info({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
       <p className="font-semibold text-kec-secondary">{label}</p>
-      <p className="mt-1 text-kec-text">{value}</p>
+      <p className="mt-1 break-words text-kec-text">{value}</p>
     </div>
   );
 }
 
 function formatDate(value: string | null) {
-  if (!value) {
-    return "Not set";
-  }
-  return new Date(value).toLocaleString();
+  return formatDateTime(value, "Not set");
 }

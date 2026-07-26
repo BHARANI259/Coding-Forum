@@ -108,7 +108,7 @@ export type CreateStudentPayload = {
   name: string;
   email: string;
   departmentId: number;
-  year: number;
+  year: number | null;
   section: string;
   technicalArea: "SOFTWARE" | "HARDWARE";
   placementWilling: boolean;
@@ -715,14 +715,18 @@ export async function apiFetch<T>(
           headers
         });
       } catch {
-        throw new Error(`Cannot reach backend endpoint ${url}. Spring Boot is reachable only if this exact API path exists and CORS allows http://localhost:3000.`);
+        throw new Error("The portal cannot connect to the server right now. Please try again in a moment.");
       }
     } else {
-      throw new Error(`Cannot reach backend endpoint ${url}. Spring Boot is reachable only if this exact API path exists and CORS allows http://localhost:3000.`);
+      throw new Error("The portal cannot connect to the server right now. Please try again in a moment.");
     }
   }
 
   if (!response.ok) {
+    if (response.status === 401 && attachToken) {
+      redirectExpiredSession();
+      throw new Error("Your session has expired. Redirecting to sign in.");
+    }
     let error: ApiError = {};
     try {
       error = await response.json();
@@ -753,8 +757,17 @@ export async function downloadFile(endpoint: string, fallbackFilename: string) {
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
+  } catch {
+    throw new Error("The report server is unavailable right now. Please try again in a moment.");
+  }
   if (!response.ok) {
+    if (response.status === 401) {
+      redirectExpiredSession();
+      throw new Error("Your session has expired. Redirecting to sign in.");
+    }
     let error: ApiError = {};
     try {
       error = await response.json();
@@ -1028,20 +1041,6 @@ export function getFacultyRounds(eventId: number) {
   return apiFetch<EventRound[]>(`/faculty/events/${eventId}/rounds`);
 }
 
-export function createFacultyRound(eventId: number, payload: RoundPayload) {
-  return apiFetch<EventRound>(`/faculty/events/${eventId}/rounds`, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-}
-
-export function updateFacultyRound(eventId: number, roundId: number, payload: RoundPayload) {
-  return apiFetch<EventRound>(`/faculty/events/${eventId}/rounds/${roundId}`, {
-    method: "PUT",
-    body: JSON.stringify(payload)
-  });
-}
-
 export function updateFacultyRoundStatus(eventId: number, roundId: number, status: string) {
   return apiFetch<EventRound>(`/faculty/events/${eventId}/rounds/${roundId}/status`, {
     method: "PATCH",
@@ -1165,48 +1164,12 @@ export function getAdminEventResults(eventId: number) {
   return apiFetch<EventResultSummary>(`/admin/events/${eventId}/results`);
 }
 
-export function declareAdminIndividualResult(eventId: number, studentId: number, resultType: string) {
-  return apiFetch<ResultItem>(`/admin/events/${eventId}/results/individual`, {
-    method: "POST",
-    body: JSON.stringify({ studentId, resultType })
-  });
-}
-
-export function declareAdminTeamResult(eventId: number, teamId: number, resultType: string) {
-  return apiFetch<ResultItem>(`/admin/events/${eventId}/results/team`, {
-    method: "POST",
-    body: JSON.stringify({ teamId, resultType })
-  });
-}
-
 export function clearAdminResult(resultId: number) {
   return apiFetch<void>(`/admin/results/${resultId}`, { method: "DELETE" });
 }
 
-export function publishAdminResults(eventId: number) {
-  return apiFetch<PublishResultsResponse>(`/admin/events/${eventId}/results/publish`, { method: "POST" });
-}
-
 export function getFacultyEventResults(eventId: number) {
   return apiFetch<EventResultSummary>(`/faculty/events/${eventId}/results`);
-}
-
-export function declareFacultyIndividualResult(eventId: number, studentId: number, resultType: string) {
-  return apiFetch<ResultItem>(`/faculty/events/${eventId}/results/individual`, {
-    method: "POST",
-    body: JSON.stringify({ studentId, resultType })
-  });
-}
-
-export function declareFacultyTeamResult(eventId: number, teamId: number, resultType: string) {
-  return apiFetch<ResultItem>(`/faculty/events/${eventId}/results/team`, {
-    method: "POST",
-    body: JSON.stringify({ teamId, resultType })
-  });
-}
-
-export function publishFacultyResults(eventId: number) {
-  return apiFetch<PublishResultsResponse>(`/faculty/events/${eventId}/results/publish`, { method: "POST" });
 }
 
 export function getMyResults() {
@@ -1418,4 +1381,20 @@ function filenameFromDisposition(disposition: string | null) {
   }
   const match = /filename="?([^"]+)"?/i.exec(disposition);
   return match?.[1] ?? null;
+}
+
+function redirectExpiredSession() {
+  if (typeof window === "undefined") return;
+  let role: UserRole | null = null;
+  try {
+    const stored = window.localStorage.getItem("kec_auth_user");
+    role = stored ? (JSON.parse(stored) as CurrentUser).role : null;
+  } catch {
+    role = null;
+  }
+  window.localStorage.removeItem("kec_auth_token");
+  window.localStorage.removeItem("kec_auth_user");
+  window.localStorage.removeItem("kec_post_password_redirect");
+  const path = role === "STUDENT" ? "/auth/student/login" : role === "FACULTY" ? "/auth/faculty/login" : role === "SUPER_ADMIN" ? "/auth/admin/login" : "/";
+  window.location.assign(path);
 }

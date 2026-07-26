@@ -26,7 +26,7 @@ export default function Button({
   return (
     <button
       className={cn(
-        "inline-flex min-h-10 items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex min-h-10 items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold leading-5 transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60",
         variants[variant],
         className
       )}

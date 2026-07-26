@@ -78,7 +78,7 @@ export default function AdminReportsPage() {
     <AppShell expectedRole="SUPER_ADMIN" title="Reports">
       <PageHeader title="Reports" subtitle="Generate PDF and Excel exports from live Coding Forum data." actions={<BackButton fallbackHref="/admin/dashboard" />} />
       {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-      <div className="grid gap-5 xl:grid-cols-3">
+      <div className="grid gap-5 xl:grid-cols-2 2xl:grid-cols-3">
         <Card>
           <h2 className="text-base font-bold text-kec-text">Event Reports</h2>
           <Select className="mt-4" label="Event" value={eventId} onChange={(event) => setEventId(event.target.value)}>
@@ -86,10 +86,10 @@ export default function AdminReportsPage() {
             {events.map((event) => <option key={event.id} value={event.id}>{event.title}</option>)}
           </Select>
           <div className="mt-4 grid gap-3">
-            <Button type="button" disabled={!eventId} loading={downloading === "event-pdf"} onClick={() => void runDownload("event-pdf", () => downloadAdminEventPdf(selectedEventId))}>Event PDF Report</Button>
-            <Button type="button" variant="secondary" disabled={!eventId} loading={downloading === "event-students"} onClick={() => void runDownload("event-students", () => downloadAdminEventStudentsExcel(selectedEventId))}>Student List Excel</Button>
-            <Button type="button" variant="secondary" disabled={!eventId} loading={downloading === "event-teams"} onClick={() => void runDownload("event-teams", () => downloadAdminEventTeamsExcel(selectedEventId))}>Team List Excel</Button>
-            <Button type="button" variant="secondary" disabled={!eventId} loading={downloading === "event-results"} onClick={() => void runDownload("event-results", () => downloadAdminEventResultsExcel(selectedEventId))}>Results Excel</Button>
+            <Button type="button" className="w-full" disabled={!eventId} loading={downloading === "event-pdf"} onClick={() => void runDownload("event-pdf", () => downloadAdminEventPdf(selectedEventId))}>Event PDF Report</Button>
+            <Button type="button" className="w-full" variant="secondary" disabled={!eventId} loading={downloading === "event-students"} onClick={() => void runDownload("event-students", () => downloadAdminEventStudentsExcel(selectedEventId))}>Download Participant List (Excel)</Button>
+            <Button type="button" className="w-full" variant="secondary" disabled={!eventId} loading={downloading === "event-teams"} onClick={() => void runDownload("event-teams", () => downloadAdminEventTeamsExcel(selectedEventId))}>Download Team List (Excel)</Button>
+            <Button type="button" className="w-full" variant="secondary" disabled={!eventId} loading={downloading === "event-results"} onClick={() => void runDownload("event-results", () => downloadAdminEventResultsExcel(selectedEventId))}>Download Results (Excel)</Button>
           </div>
         </Card>
 
@@ -110,8 +110,8 @@ export default function AdminReportsPage() {
             </div>
           </div>
           <div className="mt-4 grid gap-3">
-            <Button type="button" disabled={!departmentId} loading={downloading === "department-pdf"} onClick={() => void runDownload("department-pdf", () => downloadAdminDepartmentPdf(selectedDepartmentId, filters))}>Department PDF Report</Button>
-            <Button type="button" variant="secondary" disabled={!departmentId} loading={downloading === "department-students"} onClick={() => void runDownload("department-students", () => downloadAdminDepartmentStudentsExcel(selectedDepartmentId, filters))}>Department Student Excel</Button>
+            <Button type="button" className="w-full" disabled={!departmentId} loading={downloading === "department-pdf"} onClick={() => void runDownload("department-pdf", () => downloadAdminDepartmentPdf(selectedDepartmentId, filters))}>Department PDF Report</Button>
+            <Button type="button" className="w-full" variant="secondary" disabled={!departmentId} loading={downloading === "department-students"} onClick={() => void runDownload("department-students", () => downloadAdminDepartmentStudentsExcel(selectedDepartmentId, filters))}>Department Student Excel</Button>
           </div>
         </Card>
 
@@ -126,7 +126,7 @@ export default function AdminReportsPage() {
               <option value="">All categories</option>
               {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
             </Select>
-            <Button type="button" loading={downloading === "leaderboard"} onClick={() => void runDownload("leaderboard", () => downloadAdminCollegeLeaderboardExcel(leaderboardFilters))}>College Leaderboard Excel</Button>
+            <Button type="button" className="w-full" loading={downloading === "leaderboard"} onClick={() => void runDownload("leaderboard", () => downloadAdminCollegeLeaderboardExcel(leaderboardFilters))}>College Leaderboard Excel</Button>
           </div>
         </Card>
 
@@ -135,7 +135,7 @@ export default function AdminReportsPage() {
           <p className="mt-2 text-sm text-kec-secondary">Best used in April after club and cell activities are completed for the academic year.</p>
           <div className="mt-4 space-y-3">
             <Input label="Academic Year" value={academicYear} onChange={(event) => setAcademicYear(event.target.value)} helperText="Format: 2026-27. Academic year runs May to April." />
-            <Button type="button" loading={downloading === "yearly"} onClick={() => void runDownload("yearly", () => downloadAdminYearlyReportPdf(academicYear))}>Yearly PDF Report</Button>
+            <Button type="button" className="w-full" loading={downloading === "yearly"} onClick={() => void runDownload("yearly", () => downloadAdminYearlyReportPdf(academicYear))}>Yearly PDF Report</Button>
           </div>
         </Card>
       </div>

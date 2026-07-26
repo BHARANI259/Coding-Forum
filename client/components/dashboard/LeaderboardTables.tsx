@@ -20,17 +20,18 @@ export function StudentLeaderboardTable({ rows }: { rows: StudentLeaderboardRow[
 }
 
 export function DepartmentLeaderboardTable({ rows }: { rows: DepartmentLeaderboardRow[] }) {
+  const rankedRows = rows.filter((row) => row.totalPoints > 0 || row.totalParticipants > 0);
   return (
     <DataTable
       headers={["Rank", "Department", "Points", "Participants", "Wins"]}
-      rows={rows.map((row) => [
+      rows={rankedRows.map((row) => [
         row.rank,
         `${row.departmentCode} - ${row.departmentName}`,
         row.totalPoints,
         row.totalParticipants,
         row.wins
       ])}
-      emptyMessage="No department leaderboard data found."
+      emptyMessage="No department has earned points or recorded participation yet."
     />
   );
 }

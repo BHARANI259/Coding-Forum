@@ -21,6 +21,7 @@ import {
   type StudentStatistics
 } from "@/lib/api";
 import { getCurrentUser, updateStoredUser } from "@/lib/auth";
+import { formatDateTime } from "@/lib/dateFormat";
 
 export default function StudentProfilePage() {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -32,15 +33,13 @@ export default function StudentProfilePage() {
   const [saving, setSaving] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"personal" | "security" | "statistics">("personal");
+  const [statsLoading, setStatsLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
-        const [profileData, statistics, pointHistory] = await Promise.all([
-          getStudentProfile(),
-          getMyStatistics(),
-          getMyPointHistory({ size: 10 })
-        ]);
+        const profileData = await getStudentProfile();
         setProfile(profileData);
         setForm({
           name: profileData.name,
@@ -50,14 +49,24 @@ export default function StudentProfilePage() {
           technicalArea: profileData.technicalArea,
           placementWilling: profileData.placementWilling
         });
-        setStats(statistics);
-        setHistory(pointHistory.content);
       } catch (exception) {
         setError(exception instanceof Error ? exception.message : "Unable to load profile statistics.");
       }
     }
     void load();
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== "statistics" || stats) return;
+    setStatsLoading(true);
+    Promise.all([getMyStatistics(), getMyPointHistory({ size: 10 })])
+      .then(([statistics, pointHistory]) => {
+        setStats(statistics);
+        setHistory(pointHistory.content);
+      })
+      .catch((exception) => setError(exception instanceof Error ? exception.message : "Unable to load profile statistics."))
+      .finally(() => setStatsLoading(false));
+  }, [activeTab, stats]);
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,7 +125,12 @@ export default function StudentProfilePage() {
       />
       {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       {success ? <p className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</p> : null}
-      <Card className="mb-6">
+      <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Profile sections">
+        <Button type="button" variant={activeTab === "personal" ? "primary" : "secondary"} onClick={() => setActiveTab("personal")}>Personal Info</Button>
+        <Button type="button" variant={activeTab === "security" ? "primary" : "secondary"} onClick={() => setActiveTab("security")}>Security</Button>
+        <Button type="button" variant={activeTab === "statistics" ? "primary" : "secondary"} onClick={() => setActiveTab("statistics")}>Statistics</Button>
+      </div>
+      {activeTab === "personal" ? <Card className="mb-6">
         <h2 className="text-lg font-bold text-kec-text">Personal Information</h2>
         <form className="mt-4 space-y-4" onSubmit={handleSave}>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -138,8 +152,8 @@ export default function StudentProfilePage() {
           </div>
           <Button type="submit" loading={saving}>Save Profile</Button>
         </form>
-      </Card>
-      <Card className="mb-6">
+      </Card> : null}
+      {activeTab === "security" ? <Card className="mb-6">
         <h2 className="text-lg font-bold text-kec-text">Change Password</h2>
         <form className="mt-4 grid gap-4 sm:grid-cols-3" onSubmit={handlePasswordChange}>
           <Input label="Current Password" type="password" autoComplete="current-password" value={passwordForm.oldPassword} onChange={(event) => setPasswordForm({ ...passwordForm, oldPassword: event.target.value })} required />
@@ -149,8 +163,8 @@ export default function StudentProfilePage() {
             <Button type="submit" loading={passwordSaving}>Change Password</Button>
           </div>
         </form>
-      </Card>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      </Card> : null}
+      {activeTab === "statistics" ? statsLoading ? <Card>Loading statistics...</Card> : <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total Points" value={stats?.totalPoints ?? 0} hint={stats?.departmentCode ?? "Department"} />
         <StatCard label="Events Registered" value={stats?.totalEventsRegistered ?? 0} hint="Registration count" />
         <StatCard label="Results Declared" value={stats?.totalResultsDeclared ?? 0} hint="Result tags" />
@@ -178,12 +192,12 @@ export default function StudentProfilePage() {
               item.categoryName,
               item.pointType,
               item.points,
-              new Date(item.createdAt).toLocaleString()
+              formatDateTime(item.createdAt)
             ])}
             emptyMessage="No point history yet."
           />
         </section>
-      </div>
+      </div></> : null}
     </AppShell>
   );
 }

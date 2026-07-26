@@ -78,6 +78,7 @@ public class ResultService {
     @Transactional
     public ResultDto declareIndividualResult(Long eventId, Long studentId, String resultType, Long declaredByUserId) {
         Event event = findEvent(eventId);
+        assertResultEditable(event);
         if (!"INDIVIDUAL".equals(event.getEventType())) {
             throw new IllegalArgumentException("Individual result is allowed only for individual events.");
         }
@@ -96,6 +97,7 @@ public class ResultService {
     @Transactional
     public ResultDto declareTeamResult(Long eventId, Long teamId, String resultType, Long declaredByUserId) {
         Event event = findEvent(eventId);
+        assertResultEditable(event);
         if (!"TEAM".equals(event.getEventType())) {
             throw new IllegalArgumentException("Team result is allowed only for team events.");
         }
@@ -130,6 +132,9 @@ public class ResultService {
     @Transactional
     public PublishResultsResponse publishResults(Long eventId) {
         Event event = findEvent(eventId);
+        if ("CANCELLED".equals(event.getStatus())) {
+            throw new IllegalArgumentException("Results cannot be published for a cancelled event.");
+        }
         if (!results.existsByEventId(eventId)) {
             throw new IllegalArgumentException("At least one result is required before publishing.");
         }
@@ -163,6 +168,9 @@ public class ResultService {
     @Transactional
     public void deleteResult(Long resultId) {
         Result result = results.findById(resultId).orElseThrow(() -> new IllegalArgumentException("Result not found."));
+        if (result.getEvent().isResultsPublished() || "COMPLETED".equals(result.getEvent().getStatus())) {
+            throw new IllegalArgumentException("Published final results cannot be deleted.");
+        }
         studentPointService.deletePointsForResult(result);
         results.delete(result);
     }
@@ -273,6 +281,15 @@ public class ResultService {
 
     private Event findEvent(Long eventId) {
         return events.findById(eventId).orElseThrow(() -> new IllegalArgumentException("Event not found."));
+    }
+
+    private void assertResultEditable(Event event) {
+        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus()) || "CANCELLED".equals(event.getStatus())) {
+            throw new IllegalArgumentException("This event is closed. Result editing is disabled.");
+        }
+        if (!Set.of("PUBLISHED", "ONGOING").contains(event.getStatus())) {
+            throw new IllegalArgumentException("Publish the event before entering results.");
+        }
     }
 
     private String validResultType(String resultType) {

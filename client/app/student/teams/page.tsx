@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
@@ -10,7 +11,7 @@ import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import BackButton from "@/components/ui/BackButton";
 import { getCurrentUser } from "@/lib/auth";
-import { getMyTeams, joinTeamByCode, leaveTeam, registerTeam, type TeamDetail } from "@/lib/api";
+import { getMyTeams, joinTeamByCode, leaveTeam, type TeamDetail } from "@/lib/api";
 
 export default function StudentTeamsPage() {
   const [teams, setTeams] = useState<TeamDetail[]>([]);
@@ -53,18 +54,6 @@ export default function StudentTeamsPage() {
     }
   }
 
-  async function handleRegister(teamId: number) {
-    setError("");
-    setSuccess("");
-    try {
-      await registerTeam(teamId);
-      setSuccess("Team registration completed.");
-      await loadTeams();
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Unable to register team.");
-    }
-  }
-
   async function handleLeave(teamId: number) {
     setError("");
     setSuccess("");
@@ -91,7 +80,7 @@ export default function StudentTeamsPage() {
       </Card>
       {loading ? <Card>Loading teams...</Card> : (
         <DataTable
-          headers={["Event", "Team", "Code", "Problem", "Members", "Status", "Actions"]}
+          headers={["Event", "Team", "Code", "Member Progress", "Problem", "Members", "Status", "Actions"]}
           rows={teams.map((team) => {
             const leader = currentStudentId === team.leaderStudentId;
             const minTeamSize = team.event.minTeamSize ?? 1;
@@ -100,14 +89,14 @@ export default function StudentTeamsPage() {
               team.event.title,
               team.teamName,
               team.teamCode,
+              `${team.members.length} of ${minTeamSize} minimum`,
               team.problemStatementTitle ?? "-",
               team.members.map((member) => member.leader ? `${member.name} (Leader)` : member.name).join(", "),
               <Badge key="status" variant={team.lockedAfterRegistration ? "success" : "warning"}>{team.lockedAfterRegistration ? "Registered" : "Open"}</Badge>,
               <div key="actions" className="flex flex-wrap gap-2">
                 {leader && !team.lockedAfterRegistration ? (
-                  <Button type="button" disabled={!minimumMet} onClick={() => void handleRegister(team.id)}>
-                    {minimumMet ? "Register Team" : `Need ${minTeamSize} members`}
-                  </Button>
+                  minimumMet ? <Link href={`/student/events/${team.eventId}?action=register`}><Button type="button">Complete Enrollment</Button></Link>
+                    : <Button type="button" disabled>{`Need ${minTeamSize - team.members.length} more member${minTeamSize - team.members.length === 1 ? "" : "s"}`}</Button>
                 ) : null}
                 {!team.lockedAfterRegistration ? <Button type="button" variant="secondary" onClick={() => void handleLeave(team.id)}>Leave</Button> : null}
               </div>

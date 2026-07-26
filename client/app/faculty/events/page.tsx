@@ -10,6 +10,7 @@ import Badge from "@/components/ui/Badge";
 import BackButton from "@/components/ui/BackButton";
 import EventPosterPreview from "@/components/events/EventPosterPreview";
 import { getFacultyEvents, type EventItem } from "@/lib/api";
+import { formatDateTime } from "@/lib/dateFormat";
 
 export default function FacultyEventsPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -41,11 +42,11 @@ export default function FacultyEventsPage() {
               <div className="p-5">
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="purple">{event.category?.name ?? "Uncategorized"}</Badge>
-                  <Badge variant="info">{event.eventType}</Badge>
+                  <Badge variant="info">{formatLabel(event.eventType)}</Badge>
                   <Badge variant={event.registrationOpen ? "success" : "warning"}>{event.registrationOpen ? "Open" : "Closed"}</Badge>
                 </div>
                 <h2 className="mt-3 text-lg font-bold text-kec-text">{event.title}</h2>
-                <p className="mt-2 text-sm text-kec-secondary">{event.startDatetime ? new Date(event.startDatetime).toLocaleString() : "Date not set"}</p>
+                <p className="mt-2 text-sm text-kec-secondary">{formatDateTime(event.startDatetime, "Date not set")}</p>
                 <Link className="mt-5 inline-flex" href={`/faculty/events/${event.id}`}><Button type="button" variant="secondary">View</Button></Link>
               </div>
             </Card>
@@ -55,4 +56,8 @@ export default function FacultyEventsPage() {
       )}
     </AppShell>
   );
+}
+
+function formatLabel(value: string) {
+  return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

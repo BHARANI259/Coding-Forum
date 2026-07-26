@@ -12,7 +12,7 @@ export default function FacultyEventResultsPage() {
 
   return (
     <AppShell expectedRole="FACULTY" title="Event Results">
-      <PageHeader title="Event Results" subtitle="Declare final results for your assigned event." actions={<BackButton fallbackHref={`/faculty/events/${eventId}`} />} />
+      <PageHeader title="Round Results" subtitle="Shortlist participants round-wise, then declare final positions in the final round." actions={<BackButton fallbackHref={`/faculty/events/${eventId}`} />} />
       <EventResultsManager eventId={eventId} mode="faculty" />
     </AppShell>
   );

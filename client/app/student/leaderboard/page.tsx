@@ -39,6 +39,9 @@ export default function StudentLeaderboardPage() {
     <AppShell expectedRole="STUDENT" title="Leaderboard">
       <PageHeader title="Leaderboard" subtitle="College, department, coding, and engagement rankings." actions={<BackButton fallbackHref="/student/dashboard" />} />
       {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+      <p className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+        Points come from published final results: Winner 100, Runner-up 60, Second runner-up 40, and Participation 10, adjusted by the event category weightage. Team members each receive their own points.
+      </p>
       <div className="space-y-6">
         <Section title="College Leaderboard"><StudentLeaderboardTable rows={college} /></Section>
         <Section title="Department Leaderboard"><DepartmentLeaderboardTable rows={departments} /></Section>

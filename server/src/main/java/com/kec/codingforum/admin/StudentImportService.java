@@ -39,7 +39,7 @@ public class StudentImportService {
                 Department department = departments.findByCodeIgnoreCase(required(row, "departmentCode"))
                         .filter(Department::isActive)
                         .orElseThrow(() -> new IllegalArgumentException("Invalid departmentCode."));
-                Integer year = parseYear(required(row, "year"));
+                Integer year = optionalYear(row.get("year"));
                 boolean placementWilling = parseBoolean(row.get("placementWilling"));
 
                 Student student = studentAdminService.createStudentWithAccount(
@@ -87,7 +87,10 @@ public class StudentImportService {
         return value;
     }
 
-    private static Integer parseYear(String value) {
+    private static Integer optionalYear(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
         try {
             return Integer.parseInt(value);
         } catch (NumberFormatException exception) {

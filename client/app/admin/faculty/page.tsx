@@ -9,6 +9,7 @@ import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
 import DataTable from "@/components/ui/DataTable";
 import BackButton from "@/components/ui/BackButton";
+import ImportFilePreview from "@/components/admin/ImportFilePreview";
 import {
   createFaculty,
   getDepartments,
@@ -43,29 +44,33 @@ export default function AdminFacultyPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageInfo, setPageInfo] = useState({ totalElements: 0, totalPages: 0 });
 
-  const loadFaculty = useCallback(async () => {
+  const loadFaculty = useCallback(async (requestedPage = pageIndex) => {
+    setLoading(true);
     try {
       const page = await getFaculty({
-        page: 0,
-        size: 20,
+        page: requestedPage,
+        size: 10,
         search: filters.search,
         departmentId: filters.departmentId,
         deptMonitoringEnabled: filters.deptMonitoringEnabled
       });
       setFaculty(page.content);
+      setPageInfo({ totalElements: page.totalElements, totalPages: page.totalPages });
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to load faculty.");
+    } finally {
+      setLoading(false);
     }
-  }, [filters]);
+  }, [filters, pageIndex]);
 
   const loadInitialData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       setDepartments(await getDepartments());
-      const page = await getFaculty({ page: 0, size: 20 });
-      setFaculty(page.content);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to load faculty.");
     } finally {
@@ -78,8 +83,14 @@ export default function AdminFacultyPage() {
   }, [loadInitialData]);
 
   useEffect(() => {
-    void loadFaculty();
-  }, [loadFaculty]);
+    const timer = window.setTimeout(() => void loadFaculty(pageIndex), 300);
+    return () => window.clearTimeout(timer);
+  }, [loadFaculty, pageIndex]);
+
+  function updateFilter(name: keyof typeof filters, value: string) {
+    setPageIndex(0);
+    setFilters((current) => ({ ...current, [name]: value }));
+  }
 
   function updateForm(event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value, type } = event.target;
@@ -102,7 +113,8 @@ export default function AdminFacultyPage() {
       });
       setTemporaryPassword(created.temporaryPassword);
       setForm(emptyFacultyForm);
-      await loadFaculty();
+      setPageIndex(0);
+      await loadFaculty(0);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to create faculty.");
     } finally {
@@ -122,7 +134,8 @@ export default function AdminFacultyPage() {
       const result = await importFaculty(file);
       setImportResult(result);
       setFile(null);
-      await loadFaculty();
+      setPageIndex(0);
+      await loadFaculty(0);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to import faculty.");
     } finally {
@@ -131,13 +144,13 @@ export default function AdminFacultyPage() {
   }
 
   return (
-    <AppShell expectedRole="SUPER_ADMIN" title="Faculty">
+    <AppShell expectedRole="SUPER_ADMIN" title="Faculty" fullWidth>
       <PageHeader title="Faculty" subtitle="Create faculty profiles, linked login accounts, and department monitoring access." actions={<BackButton fallbackHref="/admin/dashboard" />} />
 
       {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
 
-      <div className="grid gap-5 xl:grid-cols-[420px_1fr]">
-        <div className="space-y-5">
+      <div className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-5">
           <Card>
             <h2 className="text-base font-bold text-kec-text">Add Faculty</h2>
             <form className="mt-4 space-y-4" onSubmit={handleCreate}>
@@ -168,26 +181,29 @@ export default function AdminFacultyPage() {
             <p className="mt-2 text-sm text-kec-secondary">
               Required columns: facultyCode, name, email, departmentCode, deptMonitoringEnabled
             </p>
+            <Button type="button" variant="secondary" className="mt-3" onClick={downloadFacultyTemplate}>Download CSV Template</Button>
             <input
               className="mt-4 block w-full text-sm text-kec-secondary file:mr-4 file:rounded-lg file:border-0 file:bg-kec-purple file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
               type="file"
               accept=".csv,.xlsx"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />
+            {file ? <p className="mt-2 text-sm text-kec-secondary">Selected: {file.name}</p> : null}
+            <ImportFilePreview file={file} requiredColumns={["facultyCode", "name", "email", "departmentCode", "deptMonitoringEnabled"]} labelColumn="facultyCode" />
             <Button type="button" className="mt-4" loading={importing} onClick={handleImport}>Import Faculty</Button>
           </Card>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Card>
             <h2 className="text-base font-bold text-kec-text">Filters</h2>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <Input label="Search" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
-              <Select label="Department" value={filters.departmentId} onChange={(event) => setFilters({ ...filters, departmentId: event.target.value })}>
+              <Input label="Search" value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} />
+              <Select label="Department" value={filters.departmentId} onChange={(event) => updateFilter("departmentId", event.target.value)}>
                 <option value="">All</option>
                 {departments.map((department) => <option key={department.id} value={department.id}>{department.code}</option>)}
               </Select>
-              <Select label="Department Monitoring" value={filters.deptMonitoringEnabled} onChange={(event) => setFilters({ ...filters, deptMonitoringEnabled: event.target.value })}>
+              <Select label="Department Monitoring" value={filters.deptMonitoringEnabled} onChange={(event) => updateFilter("deptMonitoringEnabled", event.target.value)}>
                 <option value="">All</option>
                 <option value="true">Enabled</option>
                 <option value="false">Disabled</option>
@@ -211,6 +227,15 @@ export default function AdminFacultyPage() {
               emptyMessage="No faculty found."
             />
           )}
+          {!loading && pageInfo.totalPages > 1 ? (
+            <div className="flex flex-col gap-3 rounded-xl border border-kec-border bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-kec-secondary">Page {pageIndex + 1} of {pageInfo.totalPages} ({pageInfo.totalElements} faculty)</p>
+              <div className="flex gap-2">
+                <Button type="button" variant="secondary" disabled={pageIndex === 0} onClick={() => setPageIndex((page) => Math.max(0, page - 1))}>Previous</Button>
+                <Button type="button" variant="secondary" disabled={pageIndex + 1 >= pageInfo.totalPages} onClick={() => setPageIndex((page) => page + 1)}>Next</Button>
+              </div>
+            </div>
+          ) : null}
 
           {importResult ? (
             <Card>
@@ -238,4 +263,17 @@ export default function AdminFacultyPage() {
       </div>
     </AppShell>
   );
+}
+
+function downloadFacultyTemplate() {
+  const template = [
+    "facultyCode,name,email,departmentCode,deptMonitoringEnabled",
+    "FAC001,Faculty Name,faculty@kongu.edu,CSE,false"
+  ].join("\r\n");
+  const url = URL.createObjectURL(new Blob([template], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "faculty-import-template.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 }

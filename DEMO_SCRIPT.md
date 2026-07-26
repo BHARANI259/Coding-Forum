@@ -2,6 +2,22 @@
 
 Use this path for a principal/faculty review demo.
 
+## 0. Pre-Demo Readiness Gate
+
+Complete this check before opening the application for reviewers:
+
+- Use one professionally named individual event and one professionally named team event.
+- Add a poster, at least one incharge, ordered rounds, and exactly one final round to each scenario.
+- Add a problem statement with valid reference links where selection is required.
+- Prepare registered students and one team that satisfies the minimum team size.
+- Keep one event open for registration and one event completed with published results and points.
+- Upload at least two post-event images to the completed event.
+- Confirm the student can see the open, registered, and completed event views.
+- Confirm the assigned faculty sees the event under Needs Attention and can open it.
+- Confirm dashboard and analytics totals match the prepared scenario.
+- Download one PDF and one Excel report before the live demo to verify the deployment environment.
+- Use a database backup or disposable demo records for irreversible publish actions.
+
 ## 1. Start System
 
 1. Start PostgreSQL.
@@ -39,6 +55,7 @@ Show:
    - problem statements
    - registrations
    - post-event media
+   - lifecycle-specific actions and read-only terminal state
 5. Event incharge management page.
 6. Reports page, if report files are required for review.
 
@@ -63,6 +80,7 @@ Show:
    - before publish: result hidden
    - after publish: result and points visible
 8. Leaderboard.
+9. Completed event history with published result and points.
 
 ## 4. Faculty Demo
 
@@ -83,6 +101,7 @@ Show:
 4. Final publish completes event.
 5. Post-event media upload after event completion.
 6. Faculty reports and department monitoring if enabled.
+7. Show that a published round is locked and cannot be edited again.
 
 ## 5. Recommended Demo Data
 

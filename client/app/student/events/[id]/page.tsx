@@ -13,9 +13,13 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import DataTable from "@/components/ui/DataTable";
 import BackButton from "@/components/ui/BackButton";
+import { getCurrentUser } from "@/lib/auth";
+import { formatDateTime } from "@/lib/dateFormat";
+import { getEventRegistrationState } from "@/lib/eventRegistration";
 import {
   createTeam,
   getMyEventResult,
+  getMyRegistrations,
   getMyTeams,
   getStudentEvent,
   getStudentProblemStatements,
@@ -40,6 +44,7 @@ export default function StudentEventDetailPage() {
   const [roundProgress, setRoundProgress] = useState<Record<number, RoundResult | null>>({});
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [myResult, setMyResult] = useState<StudentResult | null>(null);
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [teams, setTeams] = useState<TeamDetail[]>([]);
   const [teamName, setTeamName] = useState("");
   const [teamCode, setTeamCode] = useState("");
@@ -47,19 +52,28 @@ export default function StudentEventDetailPage() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      const [eventData, roundData, problemData, teamData] = await Promise.all([
+      const [eventData, roundData, problemData, teamData, registrationData] = await Promise.all([
         getStudentEvent(eventId),
         getStudentRounds(eventId),
         getStudentProblemStatements(eventId),
-        getMyTeams()
+        getMyTeams(),
+        getMyRegistrations()
       ]);
       setEvent(eventData);
       setRounds(roundData);
       setProblemStatements(problemData);
       setTeams(teamData.filter((team) => team.eventId === eventId));
+      const currentRegistration = registrationData.find((registration) => registration.eventId === eventId && registration.status === "REGISTERED");
+      setAlreadyRegistered(Boolean(currentRegistration));
+      if (currentRegistration?.problemStatementId) {
+        setSelectedProblemId(String(currentRegistration.problemStatementId));
+      }
       const progressEntries = await Promise.all(roundData.map(async (round) => {
         if (!round.resultPublished) {
           return [round.id, null] as const;
@@ -78,6 +92,9 @@ export default function StudentEventDetailPage() {
       }
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to load event.");
+      setEvent(null);
+    } finally {
+      setLoading(false);
     }
   }, [eventId]);
 
@@ -98,13 +115,12 @@ export default function StudentEventDetailPage() {
   }
 
   async function handleIndividualRegister() {
+    if (!requireProblemSelection()) {
+      return;
+    }
     setSaving(true);
     setError("");
     setSuccess("");
-    if (!requireProblemSelection()) {
-      setSaving(false);
-      return;
-    }
     try {
       await registerIndividual(eventId, selectedProblemStatementId());
       setSuccess("Registration completed successfully.");
@@ -120,10 +136,6 @@ export default function StudentEventDetailPage() {
     setSaving(true);
     setError("");
     setSuccess("");
-    if (!requireProblemSelection()) {
-      setSaving(false);
-      return;
-    }
     try {
       const team = await createTeam(eventId, { teamName });
       setTeamName("");
@@ -157,6 +169,10 @@ export default function StudentEventDetailPage() {
     setSaving(true);
     setError("");
     setSuccess("");
+    if (!requireProblemSelection()) {
+      setSaving(false);
+      return;
+    }
     try {
       await registerTeam(teamId, selectedProblemStatementId());
       setSuccess("Team registration completed.");
@@ -168,14 +184,35 @@ export default function StudentEventDetailPage() {
     }
   }
 
+  const currentStudentId = getCurrentUser()?.studentId;
+  const registrationState = event ? getEventRegistrationState(event) : null;
+  const eventClosed = Boolean(event && (event.resultsPublished || event.status === "COMPLETED" || event.status === "CANCELLED"));
+  const registrationAvailable = Boolean(registrationState?.available && !alreadyRegistered);
+
   return (
     <AppShell expectedRole="STUDENT" title="Event Detail">
-      <PageHeader title="Event Detail" subtitle="View event details, choose a problem statement, and register." actions={<BackButton fallbackHref="/student/events" />} />
-      {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+      <PageHeader title="Event Detail" subtitle="Review the schedule, rounds, problem statements, registration, and results." actions={<BackButton fallbackHref="/student/events" />} />
+      {error && event ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       {success ? <p className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</p> : null}
-      {event ? (
+      {!loading && error && !event ? (
+        <Card>
+          <h2 className="text-base font-bold text-kec-text">Event unavailable</h2>
+          <p className="mt-2 text-sm text-kec-secondary">{error}</p>
+          <div className="mt-4"><BackButton fallbackHref="/student/events" /></div>
+        </Card>
+      ) : event ? (
         <div className="space-y-5">
           <EventSummary event={event} />
+          {!registrationAvailable && !alreadyRegistered ? (
+            <p className="rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              {registrationState?.message ?? "Registration is not open for this event."}
+            </p>
+          ) : null}
+          {alreadyRegistered ? (
+            <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">
+              {eventClosed ? "This event has ended. Your confirmed registration remains available in your history." : "Your registration is confirmed. Registration cannot be cancelled."}
+            </p>
+          ) : null}
           <Card>
             <h2 className="text-base font-bold text-kec-text">Rounds</h2>
             <DataTable
@@ -184,10 +221,10 @@ export default function StudentEventDetailPage() {
                 round.roundOrder,
                 round.roundName,
                 round.finalRound ? "Yes" : "No",
-                round.status,
-                round.resultPublished ? `Published ${round.resultPublishedAt ? new Date(round.resultPublishedAt).toLocaleString() : ""}` : "Round result not published yet.",
-                round.resultPublished ? (roundProgress[round.id]?.status ?? "No result") : "Round result not published yet.",
-                round.scheduledAt ? new Date(round.scheduledAt).toLocaleString() : "-"
+                formatRoundStatus(round.status),
+                round.resultPublished ? `Published ${formatDateTime(round.resultPublishedAt, "")}` : "Round result not published yet.",
+                round.resultPublished ? formatStudentProgress(roundProgress[round.id], round.finalRound) : "Waiting for the faculty to publish this round result.",
+                formatDateTime(round.scheduledAt)
               ])}
               emptyMessage="No rounds configured."
             />
@@ -196,17 +233,19 @@ export default function StudentEventDetailPage() {
             <h2 className="text-base font-bold text-kec-text">Problem Statements</h2>
             {problemStatements.length ? (
               <div className="mt-4 space-y-3">
-                <Select label="Select Problem Statement" value={selectedProblemId} onChange={(changeEvent) => setSelectedProblemId(changeEvent.target.value)} required>
-                  <option value="">Choose a problem statement</option>
-                  {problemStatements.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-                </Select>
+                {registrationAvailable ? (
+                  <Select label="Select Problem Statement" value={selectedProblemId} onChange={(changeEvent) => setSelectedProblemId(changeEvent.target.value)} required>
+                    <option value="">Choose a problem statement</option>
+                    {problemStatements.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+                  </Select>
+                ) : null}
                 {problemStatements.map((item) => (
                   <div key={item.id} className="rounded-lg border border-kec-border p-3 text-sm">
-                    <p className="font-bold text-kec-text">{item.title}</p>
-                    {item.description ? <p className="mt-1 text-kec-secondary">{item.description}</p> : null}
+                    <p className="break-words font-bold text-kec-text">{item.title}</p>
+                    {item.description ? <p className="mt-1 break-words text-kec-secondary">{item.description}</p> : null}
                     {item.links.length ? (
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {item.links.map((link) => <a key={`${link.id}-${link.url}`} className="rounded-full bg-kec-purple/10 px-3 py-1 text-xs font-semibold text-kec-purple" href={link.url} target="_blank" rel="noopener noreferrer">{link.label || shortUrl(link.url)}</a>)}
+                        {item.links.map((link) => <a key={`${link.id}-${link.url}`} className="max-w-full break-words rounded-full bg-kec-purple/10 px-3 py-1 text-xs font-semibold text-kec-purple" href={link.url} target="_blank" rel="noopener noreferrer">{link.label || shortUrl(link.url)}</a>)}
                       </div>
                     ) : null}
                   </div>
@@ -220,16 +259,17 @@ export default function StudentEventDetailPage() {
               <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-kec-text">
                 <ResultBadge resultType={myResult.resultType} />
                 <span>{myResult.pointsEarned} points</span>
-                <span className="text-kec-secondary">Declared {new Date(myResult.declaredAt).toLocaleString()}</span>
+                <span className="text-kec-secondary">Declared {formatDateTime(myResult.declaredAt)}</span>
               </div>
             ) : (
               <p className="mt-2 text-sm text-kec-secondary">Result not published yet.</p>
             )}
           </Card>
-          {event.eventType === "INDIVIDUAL" ? (
+          {eventClosed || alreadyRegistered ? null : event.eventType === "INDIVIDUAL" ? (
             <Card>
               <h2 className="text-base font-bold text-kec-text">Individual Registration</h2>
-              <Button className="mt-4" type="button" loading={saving} disabled={!event.registrationOpen || event.status === "COMPLETED"} onClick={() => void handleIndividualRegister()}>Register</Button>
+              <p className="mt-2 text-sm text-kec-secondary">{registrationAvailable ? "Submit once to confirm your registration. Registrations cannot be cancelled later." : "Registration is unavailable."}</p>
+              <Button className="mt-4 w-full sm:w-auto" type="button" loading={saving} disabled={!registrationAvailable} onClick={() => void handleIndividualRegister()}>Register for Event</Button>
             </Card>
           ) : (
             <div className="grid gap-5 xl:grid-cols-2">
@@ -237,48 +277,62 @@ export default function StudentEventDetailPage() {
                 <h2 className="text-base font-bold text-kec-text">Create Team</h2>
                 <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleCreateTeam}>
                   <Input label="Team Name" value={teamName} onChange={(changeEvent) => setTeamName(changeEvent.target.value)} required />
-                  <Button type="submit" loading={saving} disabled={!event.registrationOpen || event.status === "COMPLETED"}>Create Team</Button>
+                  <Button type="submit" className="w-full sm:w-auto" loading={saving} disabled={!registrationAvailable}>Create Team</Button>
                 </form>
               </Card>
               <Card>
                 <h2 className="text-base font-bold text-kec-text">Join Team</h2>
                 <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleJoinTeam}>
                   <Input label="Team Code" value={teamCode} onChange={(changeEvent) => setTeamCode(changeEvent.target.value)} required />
-                  <Button type="submit" loading={saving} disabled={!event.registrationOpen || event.status === "COMPLETED"}>Join Team</Button>
+                  <Button type="submit" className="w-full sm:w-auto" loading={saving} disabled={!registrationAvailable}>Join Team</Button>
                 </form>
               </Card>
               <Card className="xl:col-span-2">
                 <h2 className="text-base font-bold text-kec-text">My Teams For This Event</h2>
                 <DataTable
-                  headers={["Team", "Code", "Members", "Problem", "Status", "Action"]}
+                  headers={["Team", "Code", "Member Progress", "Members", "Problem", "Status", "Action"]}
                   rows={teams.map((team) => [
                     team.teamName,
                     team.teamCode,
+                    `${team.members.length} of ${event.minTeamSize ?? 1} minimum`,
                     team.members.map((member) => member.leader ? `${member.name} (Leader)` : member.name).join(", "),
                     team.problemStatementTitle ?? "-",
                     team.registrationStatus,
-                    !team.lockedAfterRegistration ? (
+                    !team.lockedAfterRegistration && team.leaderStudentId === currentStudentId ? (
                       <Button
                         key="register"
                         type="button"
+                        className="w-full sm:w-auto"
                         loading={saving}
-                        disabled={team.members.length < (event.minTeamSize ?? 1)}
+                        disabled={!registrationAvailable || team.members.length < (event.minTeamSize ?? 1)}
                         onClick={() => void handleRegisterTeam(team.id)}
                       >
                         {team.members.length < (event.minTeamSize ?? 1) ? `Need ${event.minTeamSize ?? 1} members` : "Enroll Team"}
                       </Button>
-                    ) : "Registered"
+                    ) : team.lockedAfterRegistration ? "Registered" : "Leader will enroll"
                   ])}
                   emptyMessage="Create or join a team for this event."
                 />
               </Card>
             </div>
           )}
-          <Link href="/student/events"><Button type="button" variant="secondary">Back</Button></Link>
+          <Link href="/student/events" className="block sm:inline-block"><Button type="button" className="w-full sm:w-auto" variant="secondary">Back</Button></Link>
         </div>
-      ) : <Card>Loading event...</Card>}
+      ) : loading ? <Card>Loading event details...</Card> : null}
     </AppShell>
   );
+}
+
+function formatRoundStatus(value: string) {
+  if (value === "NOT_STARTED") return "Not started";
+  return value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ");
+}
+
+function formatStudentProgress(result: RoundResult | null, finalRound: boolean) {
+  if (!result) return "No progression recorded for you in this round.";
+  if (result.status === "DISQUALIFIED") return "Disqualified in this round";
+  if (!finalRound && result.status === "QUALIFIED") return "Qualified for the next round";
+  return result.status.replaceAll("_", " ").toLowerCase().replace(/^./, (value) => value.toUpperCase());
 }
 
 function shortUrl(value: string) {

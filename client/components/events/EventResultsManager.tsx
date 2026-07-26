@@ -35,6 +35,7 @@ import {
   type ResultItem,
   type RoundResult
 } from "@/lib/api";
+import { formatDateTime } from "@/lib/dateFormat";
 
 const finalResultTypes = ["WINNER", "RUNNER_UP", "SECOND_RUNNER_UP", "PARTICIPANT", "DISQUALIFIED"];
 
@@ -78,8 +79,11 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
   }, [eventId, mode]);
 
   const selectedRound = useMemo(() => rounds.find((round) => String(round.id) === selectedRoundId) ?? null, [rounds, selectedRoundId]);
-  const roundLocked = Boolean(selectedRound?.resultPublished);
-  const finalLocked = Boolean(event?.resultsPublished || selectedRound?.resultPublished);
+  const eventClosed = Boolean(event && (event.resultsPublished || event.status === "COMPLETED" || event.status === "CANCELLED"));
+  const eventActive = Boolean(event && !eventClosed && (event.status === "PUBLISHED" || event.status === "ONGOING"));
+  const selectedRoundOpen = Boolean(selectedRound && selectedRound.status === "ONGOING" && !selectedRound.resultPublished && eventActive);
+  const roundLocked = !selectedRoundOpen;
+  const finalLocked = !selectedRoundOpen;
 
   useEffect(() => {
     async function loadRoundResults() {
@@ -87,9 +91,14 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
         setRoundResults([]);
         return;
       }
-      setRoundResults(mode === "admin"
-        ? await getAdminRoundResults(eventId, selectedRound.id)
-        : await getFacultyRoundResults(eventId, selectedRound.id));
+      try {
+        setRoundResults(mode === "admin"
+          ? await getAdminRoundResults(eventId, selectedRound.id)
+          : await getFacultyRoundResults(eventId, selectedRound.id));
+      } catch (exception) {
+        setRoundResults([]);
+        setError(exception instanceof Error ? exception.message : "Unable to load this round.");
+      }
     }
     void loadRoundResults();
   }, [eventId, mode, selectedRound]);
@@ -158,7 +167,7 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
       return;
     }
     if (!resultType) {
-      setError("Choose a round status first.");
+      setError("Choose a final result first.");
       return;
     }
     setError("");
@@ -172,7 +181,7 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
       setSuccess(selectedRound.finalRound ? "Final result saved." : "Round shortlist saved.");
       await refreshResults();
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Unable to save round status.");
+      setError(exception instanceof Error ? exception.message : "Unable to save the result draft.");
     }
   }
 
@@ -204,7 +213,7 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
       return;
     }
     if (!resultType) {
-      setError("Choose a round status first.");
+      setError("Choose a final result first.");
       return;
     }
     if (!teamId) {
@@ -222,7 +231,7 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
       setSuccess(selectedRound.finalRound ? "Final result saved." : "Round shortlist saved.");
       await refreshResults();
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Unable to save round status.");
+      setError(exception instanceof Error ? exception.message : "Unable to save the result draft.");
     }
   }
 
@@ -318,7 +327,12 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
       {success ? <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</p> : null}
       <Card>
         <h2 className="text-lg font-bold text-kec-text">{event.title}</h2>
-        <p className="mt-1 text-sm text-kec-secondary">{event.category?.name ?? "Uncategorized"} - {event.eventType}</p>
+        <p className="mt-1 text-sm text-kec-secondary">{event.category?.name ?? "Uncategorized"} - {formatLabel(event.eventType)}</p>
+        {eventClosed ? (
+          <p className="mt-4 rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            This event is {event.status.toLowerCase()}. Existing results are available for reference, but editing and publishing are disabled.
+          </p>
+        ) : null}
         <div className="mt-5">
           <DataTable
             headers={["Order", "Round", "Type", "Status", "Publish Status", "Published At", "Publish"]}
@@ -326,19 +340,15 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
               round.roundOrder,
               round.roundName,
               round.finalRound ? "Final" : "Shortlist",
-              <Select key="status" label="Status" value={round.status} disabled={round.resultPublished} onChange={(changeEvent) => void updateRoundStatus(round.id, changeEvent.target.value)}>
-                {["NOT_STARTED", "ONGOING", "COMPLETED", "CANCELLED"].map((status) => <option key={status}>{status}</option>)}
-              </Select>,
+              formatRoundStatus(round.status),
               round.resultPublished ? "Published / Locked" : "Not Published",
-              round.resultPublishedAt ? new Date(round.resultPublishedAt).toLocaleString() : "-",
-              <Button
-                key="publish"
-                type="button"
-                disabled={round.resultPublished || (round.finalRound && event.resultsPublished)}
-                onClick={() => void publishRound(round)}
-              >
-                {round.finalRound ? "Publish Final Result" : "Publish Round Result"}
-              </Button>
+              formatDateTime(round.resultPublishedAt),
+              <div key="actions" className="flex flex-wrap gap-2">
+                {round.status === "NOT_STARTED" && eventActive ? <Button type="button" variant="secondary" onClick={() => void updateRoundStatus(round.id, "ONGOING")}>Start Round</Button> : null}
+                {round.status === "ONGOING" && eventActive ? <Button type="button" onClick={() => void publishRound(round)}>{round.finalRound ? "Publish Final Result" : "Publish Round Result"}</Button> : null}
+                {round.resultPublished ? <span className="text-xs font-semibold text-green-700">Locked</span> : null}
+                {!eventActive && !round.resultPublished ? <span className="text-xs text-kec-muted">Unavailable</span> : null}
+              </div>
             ])}
             emptyMessage="No rounds configured."
           />
@@ -353,16 +363,17 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
         </div>
         {selectedRound ? (
           <div className="mt-4 grid gap-3 text-sm md:grid-cols-4">
-            <Info label="Round Status" value={selectedRound.status} />
+            <Info label="Round Status" value={formatRoundStatus(selectedRound.status)} />
             <Info label="Publish Status" value={selectedRound.resultPublished ? "Published / Locked" : "Not Published"} />
-            <Info label="Published At" value={selectedRound.resultPublishedAt ? new Date(selectedRound.resultPublishedAt).toLocaleString() : "-"} />
+            <Info label="Published At" value={formatDateTime(selectedRound.resultPublishedAt)} />
             <Info label="Round Type" value={selectedRound.finalRound ? "Final Round" : "Shortlisting Round"} />
           </div>
         ) : null}
         <p className="mt-3 text-sm text-kec-secondary">
-          {selectedRound?.finalRound
-            ? "Final result dropdowns remain draft until Publish Final Result is clicked."
-            : "Use the Disqualified switch for each participant/team, then publish this round result."}
+          {!selectedRound ? "Choose a round to review its participants and result status."
+            : selectedRound.status === "NOT_STARTED" ? "Start this round before changing participant results."
+              : selectedRound.finalRound ? "Choose each final position, save the drafts, then publish the final result."
+                : "Use the Disqualified switch for each participant or team, then publish this round result."}
         </p>
         {selectedRound?.resultPublished ? (
           <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -383,12 +394,12 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
               registration.studentName,
               registration.registerNumber,
               registration.departmentCode ?? "-",
-              roundResult?.status ?? "-",
+              roundResult?.status ? formatLabel(roundResult.status) : "-",
               result ? <ResultBadge key="badge" resultType={result.resultType} /> : "-",
               result?.pointsAwarded ?? "-",
               <Select key="select" label="Final Result" disabled={finalLocked} value={selected[`student-${registration.studentId}`] ?? roundResult?.status ?? ""} onChange={(event) => setSelected({ ...selected, [`student-${registration.studentId}`]: event.target.value })}>
                 <option value="">Choose</option>
-                {finalResultTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                {finalResultTypes.map((type) => <option key={type} value={type}>{formatLabel(type)}</option>)}
               </Select>,
               <div key="actions" className="flex flex-wrap gap-2">
                 <Button type="button" disabled={finalLocked} onClick={() => void saveIndividual(registration.studentId)}>Save Draft</Button>
@@ -398,7 +409,7 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
               registration.studentName,
               registration.registerNumber,
               registration.departmentCode ?? "-",
-              roundResult?.status ?? "QUALIFIED",
+              formatLabel(roundResult?.status ?? "QUALIFIED"),
               <input key="switch" type="checkbox" disabled={roundLocked} checked={roundResult?.status === "DISQUALIFIED"} onChange={(event) => void saveIndividualDisqualification(registration.studentId, event.target.checked)} />,
               roundLocked ? "Locked" : "Toggle to save"
             ];
@@ -416,12 +427,12 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
             return selectedRound?.finalRound ? [
               `${team.teamName} (${team.teamCode})`,
               team.members.join(", "),
-              roundResult?.status ?? "-",
+              roundResult?.status ? formatLabel(roundResult.status) : "-",
               result ? <ResultBadge key="badge" resultType={result.resultType} /> : "-",
               result?.pointsAwarded ?? "-",
               <Select key="select" label="Final Result" disabled={finalLocked} value={selected[`team-${team.teamCode}`] ?? roundResult?.status ?? ""} onChange={(event) => setSelected({ ...selected, [`team-${team.teamCode}`]: event.target.value })}>
                 <option value="">Choose</option>
-                {finalResultTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                {finalResultTypes.map((type) => <option key={type} value={type}>{formatLabel(type)}</option>)}
               </Select>,
               <div key="actions" className="flex flex-wrap gap-2">
                 <Button type="button" disabled={finalLocked} onClick={() => void saveTeam(team.teamId, team.teamCode)}>Save Draft</Button>
@@ -430,7 +441,7 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
             ] : [
               `${team.teamName} (${team.teamCode})`,
               team.members.join(", "),
-              roundResult?.status ?? "QUALIFIED",
+              formatLabel(roundResult?.status ?? "QUALIFIED"),
               <input key="switch" type="checkbox" disabled={roundLocked} checked={roundResult?.status === "DISQUALIFIED"} onChange={(event) => void saveTeamDisqualification(team.teamId, team.teamCode, event.target.checked)} />,
               roundLocked ? "Locked" : "Toggle to save"
             ];
@@ -449,4 +460,13 @@ function Info({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-kec-text">{value}</p>
     </div>
   );
+}
+
+function formatRoundStatus(value: string) {
+  if (value === "NOT_STARTED") return "Not started";
+  return value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ");
+}
+
+function formatLabel(value: string) {
+  return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

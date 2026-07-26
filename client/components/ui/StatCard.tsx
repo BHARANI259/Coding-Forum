@@ -10,9 +10,9 @@ type StatCardProps = {
 export default function StatCard({ label, value, hint, icon }: StatCardProps) {
   return (
     <Card className="flex items-start justify-between gap-4">
-      <div>
+      <div className="min-w-0">
         <p className="text-sm font-medium text-kec-secondary">{label}</p>
-        <p className="mt-3 text-3xl font-bold text-kec-text">{value}</p>
+        <p className="mt-3 break-words text-2xl font-bold text-kec-text sm:text-3xl">{value}</p>
         {hint ? <p className="mt-2 text-xs text-kec-muted">{hint}</p> : null}
       </div>
       {icon ? (

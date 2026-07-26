@@ -29,6 +29,8 @@ import java.util.List;
 
 @Service
 public class PdfReportService {
+    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy hh:mm a");
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private static final Font TITLE = new Font(Font.HELVETICA, 14, Font.BOLD);
     private static final Font COLLEGE = new Font(Font.HELVETICA, 12, Font.BOLD);
@@ -308,15 +310,15 @@ public class PdfReportService {
     }
 
     private String format(LocalDateTime value) {
-        return value == null ? "-" : value.toString().replace('T', ' ');
+        return value == null ? "-" : value.format(DATE_TIME_FORMAT);
     }
 
     private String displayDateTime(LocalDateTime value) {
-        return value == null ? "-" : value.format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a"));
+        return value == null ? "-" : value.format(DATE_TIME_FORMAT);
     }
 
     private String displayDate(LocalDateTime value) {
-        return value == null ? "-" : value.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
+        return value == null ? "-" : value.format(DATE_FORMAT);
     }
 
     private String eventHeldOn(EventReportData data) {

@@ -10,6 +10,8 @@ import com.kec.codingforum.event.dto.UpdateEventStatusRequest;
 import com.kec.codingforum.event.dto.UpdateRegistrationStatusRequest;
 import com.kec.codingforum.notification.NotificationRecipientResolver;
 import com.kec.codingforum.notification.NotificationService;
+import com.kec.codingforum.points.StudentPointRepository;
+import com.kec.codingforum.result.ResultRepository;
 import com.kec.codingforum.security.SecurityUtils;
 import com.kec.codingforum.user.Faculty;
 import com.kec.codingforum.user.FacultyRepository;
@@ -43,8 +45,11 @@ public class EventAdminService {
     private final UserRepository users;
     private final EventRoundRepository rounds;
     private final EventProblemStatementRepository problemStatements;
+    private final ResultRepository results;
+    private final StudentPointRepository studentPoints;
     private final NotificationService notificationService;
     private final NotificationRecipientResolver recipientResolver;
+    private final EventLifecycleService lifecycleService;
 
     public EventAdminService(
             EventRepository events,
@@ -54,8 +59,11 @@ public class EventAdminService {
             UserRepository users,
             EventRoundRepository rounds,
             EventProblemStatementRepository problemStatements,
+            ResultRepository results,
+            StudentPointRepository studentPoints,
             NotificationService notificationService,
-            NotificationRecipientResolver recipientResolver
+            NotificationRecipientResolver recipientResolver,
+            EventLifecycleService lifecycleService
     ) {
         this.events = events;
         this.categories = categories;
@@ -64,11 +72,14 @@ public class EventAdminService {
         this.users = users;
         this.rounds = rounds;
         this.problemStatements = problemStatements;
+        this.results = results;
+        this.studentPoints = studentPoints;
         this.notificationService = notificationService;
         this.recipientResolver = recipientResolver;
+        this.lifecycleService = lifecycleService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<EventListItemDto> list(
             Pageable pageable,
             String search,
@@ -79,12 +90,14 @@ public class EventAdminService {
             Long departmentId,
             Integer year
     ) {
+        lifecycleService.syncCurrentLifecycle();
         return events.findAll(spec(search, categoryId, eventType, status, registrationOpen, departmentId, year), pageable)
                 .map(event -> EventMapper.listItem(event, rounds.countByEventId(event.getId()), problemStatements.countByEventIdAndActiveTrue(event.getId())));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public EventDetailDto get(Long id) {
+        lifecycleService.syncCurrentLifecycle();
         Event event = findEvent(id);
         return EventMapper.detail(event, rounds.countByEventId(event.getId()), problemStatements.countByEventIdAndActiveTrue(event.getId()));
     }
@@ -96,16 +109,18 @@ public class EventAdminService {
                 .orElseThrow(() -> new IllegalArgumentException("Current user not found."));
         event.setCreatedBy(currentUser);
         apply(event, request);
-        Event saved = events.save(event);
-        if ("PUBLISHED".equals(saved.getStatus())) {
-            notifyEventPublished(saved);
+        if (!"DRAFT".equals(event.getStatus())) {
+            throw new IllegalArgumentException("Create the event as Draft, configure its incharges and rounds, then publish it.");
         }
+        Event saved = events.save(event);
         return EventMapper.detail(saved, rounds.countByEventId(saved.getId()), problemStatements.countByEventIdAndActiveTrue(saved.getId()));
     }
 
     @Transactional
     public EventDetailDto update(Long id, UpdateEventRequest request) {
+        lifecycleService.syncCurrentLifecycle();
         Event event = findEvent(id);
+        assertEventEditable(event);
         String oldStatus = event.getStatus();
         boolean oldRegistrationOpen = event.isRegistrationOpen();
         apply(event, request);
@@ -115,11 +130,26 @@ public class EventAdminService {
 
     @Transactional
     public EventDetailDto updateStatus(Long id, UpdateEventStatusRequest request) {
+        lifecycleService.syncCurrentLifecycle();
         Event event = findEvent(id);
+        assertEventEditable(event);
         String oldStatus = event.getStatus();
         boolean oldRegistrationOpen = event.isRegistrationOpen();
-        event.setStatus(validStatus(request.status(), false));
-        closeRegistrationIfTerminal(event);
+        String newStatus = validStatus(request.status(), false);
+        if ("COMPLETED".equals(newStatus)) {
+            throw new IllegalArgumentException("An event is completed automatically when the final round result is published.");
+        }
+        if ("CANCELLED".equals(newStatus)) {
+            return cancel(id);
+        }
+        validateStatusTransition(event, newStatus);
+        if ("PUBLISHED".equals(newStatus)) {
+            validatePublishReadiness(event);
+        }
+        event.setStatus(newStatus);
+        if ("ONGOING".equals(newStatus)) {
+            event.setRegistrationOpen(false);
+        }
         event.setUpdatedAt(LocalDateTime.now());
         if (!"PUBLISHED".equals(oldStatus) && "PUBLISHED".equals(event.getStatus())) {
             notifyEventPublished(event);
@@ -132,10 +162,12 @@ public class EventAdminService {
 
     @Transactional
     public EventDetailDto updateRegistration(Long id, UpdateRegistrationStatusRequest request) {
+        lifecycleService.syncCurrentLifecycle();
         Event event = findEvent(id);
+        assertEventEditable(event);
         boolean oldRegistrationOpen = event.isRegistrationOpen();
-        if (request.registrationOpen() && isTerminalStatus(event.getStatus())) {
-            throw new IllegalArgumentException("Registration cannot be opened for completed or cancelled events.");
+        if (request.registrationOpen()) {
+            lifecycleService.assertCanOpenRegistration(event);
         }
         event.setRegistrationOpen(request.registrationOpen());
         event.setUpdatedAt(LocalDateTime.now());
@@ -148,6 +180,13 @@ public class EventAdminService {
     @Transactional
     public EventDetailDto cancel(Long id) {
         Event event = findEvent(id);
+        if ("CANCELLED".equals(event.getStatus())) {
+            return EventMapper.detail(event, rounds.countByEventId(event.getId()), problemStatements.countByEventIdAndActiveTrue(event.getId()));
+        }
+        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus())
+                || results.existsByEventId(id) || studentPoints.existsByEventId(id)) {
+            throw new IllegalArgumentException("An event with declared results or awarded points cannot be cancelled.");
+        }
         event.setStatus("CANCELLED");
         event.setRegistrationOpen(false);
         event.setUpdatedAt(LocalDateTime.now());
@@ -249,8 +288,23 @@ public class EventAdminService {
         event.setRegistrationEnd(registrationEnd);
         event.setMaxParticipants(maxParticipants);
         event.setPlacementWillingOnly(placementWillingOnly);
-        event.setStatus(validStatus(status, true));
-        closeRegistrationIfTerminal(event);
+        String normalizedStatus = validStatus(status, true);
+        if (event.getId() != null && !event.getStatus().equals(normalizedStatus)) {
+            if ("COMPLETED".equals(normalizedStatus) || "CANCELLED".equals(normalizedStatus)) {
+                throw new IllegalArgumentException("Use the event lifecycle actions instead of changing to a terminal status in the edit form.");
+            }
+            validateStatusTransition(event, normalizedStatus);
+            if ("PUBLISHED".equals(normalizedStatus)) {
+                validatePublishReadiness(event);
+            }
+        }
+        if (registrationOpen && !"PUBLISHED".equals(normalizedStatus)) {
+            throw new IllegalArgumentException("Registration can be open only while an event is published.");
+        }
+        event.setStatus(normalizedStatus);
+        if (registrationOpen) {
+            lifecycleService.assertCanOpenRegistration(event);
+        }
         event.setUpdatedAt(LocalDateTime.now());
 
         if ("TEAM".equals(normalizedEventType)) {
@@ -302,6 +356,45 @@ public class EventAdminService {
 
     private boolean isTerminalStatus(String status) {
         return "COMPLETED".equals(status) || "CANCELLED".equals(status);
+    }
+
+    private void assertEventEditable(Event event) {
+        if (isTerminalStatus(event.getStatus()) || event.isResultsPublished()) {
+            throw new IllegalArgumentException("Completed and cancelled events are read-only.");
+        }
+    }
+
+    private void validateStatusTransition(Event event, String newStatus) {
+        String current = event.getStatus();
+        if (current.equals(newStatus)) {
+            return;
+        }
+        boolean valid = ("DRAFT".equals(current) && "PUBLISHED".equals(newStatus))
+                || ("PUBLISHED".equals(current) && "ONGOING".equals(newStatus));
+        if (!valid) {
+            throw new IllegalArgumentException("Invalid event status transition from " + current + " to " + newStatus + ".");
+        }
+    }
+
+    private void validatePublishReadiness(Event event) {
+        List<EventRound> configuredRounds = rounds.findByEventIdOrderByRoundOrderAsc(event.getId());
+        if (event.getIncharges().isEmpty()) {
+            throw new IllegalArgumentException("Assign at least one faculty incharge before publishing the event.");
+        }
+        if (configuredRounds.isEmpty()) {
+            throw new IllegalArgumentException("Configure the event rounds before publishing the event.");
+        }
+        List<EventRound> finalRounds = configuredRounds.stream().filter(EventRound::isFinalRound).toList();
+        if (finalRounds.size() != 1) {
+            throw new IllegalArgumentException("Exactly one final round is required before publishing the event.");
+        }
+        int highestOrder = configuredRounds.stream().mapToInt(EventRound::getRoundOrder).max().orElse(0);
+        if (finalRounds.get(0).getRoundOrder() != highestOrder) {
+            throw new IllegalArgumentException("The final round must be the last configured round.");
+        }
+        if (event.getStartDatetime() == null || event.getEndDatetime() == null) {
+            throw new IllegalArgumentException("Event start and end date/time are required before publishing.");
+        }
     }
 
     private void notifyEventPublished(Event event) {

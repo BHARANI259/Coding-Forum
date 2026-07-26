@@ -10,5 +10,8 @@ public interface EventRoundRepository extends JpaRepository<EventRound, Long> {
     Optional<EventRound> findByIdAndEventId(Long id, Long eventId);
     boolean existsByEventIdAndRoundOrder(Long eventId, Integer roundOrder);
     boolean existsByEventIdAndRoundOrderAndIdNot(Long eventId, Integer roundOrder, Long id);
+    boolean existsByEventIdAndFinalRoundTrue(Long eventId);
+    boolean existsByEventIdAndFinalRoundTrueAndIdNot(Long eventId, Long id);
+    long countByEventIdAndFinalRoundTrue(Long eventId);
     long countByEventId(Long eventId);
 }

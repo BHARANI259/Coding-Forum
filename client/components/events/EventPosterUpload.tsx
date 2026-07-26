@@ -4,6 +4,7 @@ import { ChangeEvent, useState } from "react";
 import Button from "@/components/ui/Button";
 import EventPosterPreview from "@/components/events/EventPosterPreview";
 import type { EventDetail } from "@/lib/api";
+import { formatDateTime } from "@/lib/dateFormat";
 
 type EventPosterUploadProps = {
   event?: EventDetail;
@@ -53,7 +54,7 @@ export default function EventPosterUpload({ event, selectedFile, onFileChange, o
         {event?.posterOriginalName ? (
           <div className="mt-3 rounded-lg border border-kec-border bg-slate-50 px-3 py-2 text-sm text-kec-secondary">
             <p><span className="font-semibold text-kec-text">Current:</span> {event.posterOriginalName}</p>
-            <p>{formatBytes(event.posterSizeBytes)}{event.posterUploadedAt ? `, uploaded ${new Date(event.posterUploadedAt).toLocaleString()}` : ""}</p>
+            <p>{formatBytes(event.posterSizeBytes)}{event.posterUploadedAt ? `, uploaded ${formatDateTime(event.posterUploadedAt)}` : ""}</p>
           </div>
         ) : null}
         {selectedFile ? (

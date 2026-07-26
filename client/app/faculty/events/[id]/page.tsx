@@ -11,7 +11,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import DataTable from "@/components/ui/DataTable";
 import BackButton from "@/components/ui/BackButton";
-import Select from "@/components/ui/Select";
+import { formatDateTime } from "@/lib/dateFormat";
 import {
   downloadFacultyEventPdf,
   downloadFacultyEventResultsExcel,
@@ -38,10 +38,13 @@ export default function FacultyEventDetailPage() {
   const [rounds, setRounds] = useState<EventRound[]>([]);
   const [reportDownloading, setReportDownloading] = useState("");
   const [publishingRoundId, setPublishingRoundId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
       const id = Number(params.id);
       const [eventData, registrationData, problemData, roundData] = await Promise.all([
@@ -56,6 +59,9 @@ export default function FacultyEventDetailPage() {
       setRounds(roundData);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to load event.");
+      setEvent(null);
+    } finally {
+      setLoading(false);
     }
   }, [params.id]);
 
@@ -108,26 +114,40 @@ export default function FacultyEventDetailPage() {
     }
   }
 
+  const eventClosed = Boolean(event && (event.resultsPublished || event.status === "COMPLETED" || event.status === "CANCELLED"));
+  const eventActive = Boolean(event && !eventClosed && (event.status === "PUBLISHED" || event.status === "ONGOING"));
+
   return (
     <AppShell expectedRole="FACULTY" title="Assigned Event Detail">
       <PageHeader
         title="Assigned Event Detail"
-        subtitle="Read-only event view with result entry for assigned incharges."
+        subtitle="Review your assigned event, start rounds, publish round results, and manage post-event evidence."
         actions={<BackButton fallbackHref="/faculty/events" />}
       />
-      {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+      {error && event ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       {success ? <p className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</p> : null}
-      {event ? (
+      {!loading && error && !event ? (
+        <Card>
+          <h2 className="text-base font-bold text-kec-text">Event unavailable</h2>
+          <p className="mt-2 text-sm text-kec-secondary">{error}</p>
+          <div className="mt-4"><BackButton fallbackHref="/faculty/events" /></div>
+        </Card>
+      ) : event ? (
         <div className="space-y-5">
           <EventSummary event={event} />
+          {eventClosed ? (
+            <p className="rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              This event is {event.status.toLowerCase()}. Rounds and results are read-only; reports and post-event evidence remain available.
+            </p>
+          ) : null}
           <EventMediaManager eventId={Number(params.id)} mode="faculty" eventCompleted={event.status === "COMPLETED" || event.resultsPublished} />
           <Card>
             <h2 className="text-base font-bold text-kec-text">Reports</h2>
             <div className="mt-4 flex flex-wrap gap-3">
-              <Button type="button" loading={reportDownloading === "pdf"} onClick={() => void downloadReport("pdf", () => downloadFacultyEventPdf(Number(params.id)))}>Download Event PDF</Button>
-              <Button type="button" variant="secondary" loading={reportDownloading === "students"} onClick={() => void downloadReport("students", () => downloadFacultyEventStudentsExcel(Number(params.id)))}>Download Students Excel</Button>
-              <Button type="button" variant="secondary" loading={reportDownloading === "teams"} onClick={() => void downloadReport("teams", () => downloadFacultyEventTeamsExcel(Number(params.id)))}>Download Teams Excel</Button>
-              <Button type="button" variant="secondary" loading={reportDownloading === "results"} onClick={() => void downloadReport("results", () => downloadFacultyEventResultsExcel(Number(params.id)))}>Download Results Excel</Button>
+              <Button type="button" loading={reportDownloading === "pdf"} onClick={() => void downloadReport("pdf", () => downloadFacultyEventPdf(Number(params.id)))}>Download Event Report (PDF)</Button>
+              <Button type="button" variant="secondary" loading={reportDownloading === "students"} onClick={() => void downloadReport("students", () => downloadFacultyEventStudentsExcel(Number(params.id)))}>Download Participant List (Excel)</Button>
+              <Button type="button" variant="secondary" loading={reportDownloading === "teams"} onClick={() => void downloadReport("teams", () => downloadFacultyEventTeamsExcel(Number(params.id)))}>Download Team List (Excel)</Button>
+              <Button type="button" variant="secondary" loading={reportDownloading === "results"} onClick={() => void downloadReport("results", () => downloadFacultyEventResultsExcel(Number(params.id)))}>Download Result List (Excel)</Button>
             </div>
           </Card>
           <Card>
@@ -157,20 +177,19 @@ export default function FacultyEventDetailPage() {
                   round.roundOrder,
                   round.roundName,
                   round.finalRound ? "Yes" : "No",
-                  <Select key="status" label="Status" value={round.status} disabled={round.resultPublished} onChange={(changeEvent) => void handleRoundStatus(round.id, changeEvent.target.value)}>
-                    {["NOT_STARTED", "ONGOING", "COMPLETED", "CANCELLED"].map((status) => <option key={status}>{status}</option>)}
-                  </Select>,
+                  formatRoundStatus(round.status),
                   round.resultPublished ? "Published / Locked" : "Not Published",
-                  round.resultPublishedAt ? new Date(round.resultPublishedAt).toLocaleString() : "-",
-                  <Button
-                    key="publish"
-                    type="button"
-                    loading={publishingRoundId === round.id}
-                    disabled={round.resultPublished || (round.finalRound && event.resultsPublished)}
-                    onClick={() => void publishRound(round)}
-                  >
-                    {round.finalRound ? "Publish Final Result" : "Publish Round Result"}
-                  </Button>
+                  formatDateTime(round.resultPublishedAt),
+                  <div key="actions" className="flex flex-wrap gap-2">
+                    {round.status === "NOT_STARTED" && eventActive ? <Button type="button" variant="secondary" onClick={() => void handleRoundStatus(round.id, "ONGOING")}>Start Round</Button> : null}
+                    {round.status === "ONGOING" && eventActive ? (
+                      <Button type="button" loading={publishingRoundId === round.id} onClick={() => void publishRound(round)}>
+                        {round.finalRound ? "Publish Final Result" : "Publish Round Result"}
+                      </Button>
+                    ) : null}
+                    {round.resultPublished ? <span className="text-xs font-semibold text-green-700">Locked</span> : null}
+                    {!eventActive && !round.resultPublished ? <span className="text-xs text-kec-muted">Unavailable</span> : null}
+                  </div>
                 ])}
                 emptyMessage="No rounds configured."
               />
@@ -181,9 +200,14 @@ export default function FacultyEventDetailPage() {
             <EventRegistrationsTable registrations={registrations} />
           </div>
         </div>
-      ) : <Card>Loading event...</Card>}
+      ) : loading ? <Card>Loading event details...</Card> : null}
     </AppShell>
   );
+}
+
+function formatRoundStatus(value: string) {
+  if (value === "NOT_STARTED") return "Not started";
+  return value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ");
 }
 
 function shortUrl(value: string) {

@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class FacultyAdminService {
@@ -51,8 +54,13 @@ public class FacultyAdminService {
             Boolean deptMonitoringEnabled,
             Boolean active
     ) {
-        return faculties.findAll(facultySpec(search, departmentId, deptMonitoringEnabled, active), pageable)
-                .map(faculty -> AdminMapping.facultyDto(faculty, users));
+        Page<Faculty> facultyPage = faculties.findAll(facultySpec(search, departmentId, deptMonitoringEnabled, active), pageable);
+        Map<Long, User> linkedUsers = users.findByFacultyIdIn(facultyPage.getContent().stream().map(Faculty::getId).toList()).stream()
+                .collect(Collectors.toMap(user -> user.getFaculty().getId(), Function.identity()));
+        return facultyPage.map(faculty -> AdminMapping.facultyDto(
+                faculty,
+                linkedUsers.containsKey(faculty.getId()) ? linkedUsers.get(faculty.getId()).getId() : null
+        ));
     }
 
     @Transactional

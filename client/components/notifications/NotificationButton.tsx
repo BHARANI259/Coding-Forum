@@ -134,7 +134,7 @@ export default function NotificationButton() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 mt-3 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-kec-border bg-white shadow-lg">
+        <div className="fixed left-3 right-3 top-16 z-50 overflow-hidden rounded-xl border border-kec-border bg-white shadow-lg sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-[min(360px,calc(100vw-2rem))]">
           <div className="flex items-center justify-between border-b border-kec-border px-4 py-3">
             <div>
               <p className="text-sm font-bold text-kec-text">Notifications</p>
@@ -158,7 +158,7 @@ export default function NotificationButton() {
                   <span className="mt-1 line-clamp-2 block text-xs text-kec-secondary">{item.message}</span>
                   <span className="mt-2 flex items-center gap-2 text-xs text-kec-muted">
                     <span>{shortTime(item.createdAt)}</span>
-                    <span>{item.notificationType.replaceAll("_", " ")}</span>
+                    <span>{item.notificationType.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())}</span>
                   </span>
                 </span>
               </button>

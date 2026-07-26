@@ -13,6 +13,7 @@ import Input from "@/components/ui/Input";
 import PageHeader from "@/components/ui/PageHeader";
 import Select from "@/components/ui/Select";
 import { getAdminEvents, getDepartments, getEventCategories, type Department, type EventCategory, type EventItem } from "@/lib/api";
+import { formatDateTime } from "@/lib/dateFormat";
 import {
   assignEventIncharge,
   getEventInchargeAssignments,
@@ -151,7 +152,7 @@ function AdminEventInchargesContent() {
   }
 
   return (
-    <AppShell expectedRole="SUPER_ADMIN" title="Event Incharges">
+    <AppShell expectedRole="SUPER_ADMIN" title="Event Incharges" fullWidth>
       <PageHeader
         title="Event Incharges"
         subtitle="Assign and manage faculty coordinators for coding forum events."
@@ -172,7 +173,7 @@ function AdminEventInchargesContent() {
             {faculty.map((member) => <option key={member.facultyId} value={member.facultyId}>{member.facultyName} ({member.email})</option>)}
           </Select>
           <Input label="Responsibility" value={assignForm.responsibility} onChange={(event) => setAssignForm({ ...assignForm, responsibility: event.target.value })} placeholder="Overall coordinator" />
-          <div className="flex flex-col justify-end gap-3">
+          <div className="flex min-w-0 flex-col justify-end gap-3">
             <label className="flex items-center gap-2 text-sm font-semibold text-kec-text">
               <input type="checkbox" checked={assignForm.primaryIncharge} onChange={(event) => setAssignForm({ ...assignForm, primaryIncharge: event.target.checked })} />
               Primary
@@ -228,8 +229,8 @@ function AdminEventInchargesContent() {
             editId === assignment.assignmentId ? (
               <Input key="responsibility" label="Responsibility" value={editForm.responsibility} onChange={(event) => setEditForm({ ...editForm, responsibility: event.target.value })} />
             ) : assignment.responsibility ?? "-",
-            assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleString() : "-",
-            <div key="actions" className="flex flex-wrap gap-2">
+            formatDateTime(assignment.assignedAt),
+            <div key="actions" className="grid gap-2 sm:flex sm:flex-wrap">
               {editId === assignment.assignmentId ? (
                 <>
                   <Button type="button" loading={saving} onClick={() => void handleUpdate(assignment.assignmentId)}>Save</Button>

@@ -80,7 +80,7 @@ export default function AppShell({ expectedRole, title, children, fullWidth = fa
           title={title}
           onMenuClick={() => setMobileOpen(true)}
         />
-        <main className={fullWidth ? "w-full px-4 py-6 sm:px-6 lg:px-8" : "mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"}>{children}</main>
+        <main className={fullWidth ? "w-full px-3 py-4 sm:px-6 sm:py-6 lg:px-8" : "mx-auto w-full max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8"}>{children}</main>
       </div>
     </div>
   );

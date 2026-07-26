@@ -119,14 +119,17 @@ public class EventRoundResultService {
     public void publishRoundResult(Long eventId, Long roundId, Long userId) {
         EventRound round = findRound(eventId, roundId);
         Event event = round.getEvent();
+        assertRoundEditable(round);
         if (round.isFinalRound()) {
             throw new IllegalArgumentException("Use Publish Final Result for the final round.");
         }
-        if (round.isResultPublished()) {
-            throw new IllegalArgumentException("This round result has already been published.");
+        if (!"ONGOING".equals(round.getStatus())) {
+            throw new IllegalArgumentException("Start this round before publishing its result.");
         }
-        if (event.isResultsPublished()) {
-            throw new IllegalArgumentException("Final results have already been published.");
+        boolean hasNextRound = rounds.findByEventIdOrderByRoundOrderAsc(eventId).stream()
+                .anyMatch(item -> item.getRoundOrder() > round.getRoundOrder());
+        if (!hasNextRound) {
+            throw new IllegalArgumentException("Configure a following round before publishing this non-final round.");
         }
         if ("TEAM".equals(event.getEventType())) {
             publishTeamShortlist(event, round, userId);
@@ -140,11 +143,15 @@ public class EventRoundResultService {
     public void publishFinalResult(Long eventId, Long roundId, Long userId) {
         EventRound round = findRound(eventId, roundId);
         Event event = round.getEvent();
+        assertRoundEditable(round);
         if (!round.isFinalRound()) {
             throw new IllegalArgumentException("Use Publish Round Result for non-final rounds.");
         }
-        if (round.isResultPublished() || event.isResultsPublished()) {
-            throw new IllegalArgumentException("Final results have already been published.");
+        if (!"ONGOING".equals(round.getStatus())) {
+            throw new IllegalArgumentException("Start the final round before publishing its result.");
+        }
+        if (rounds.countByEventIdAndFinalRoundTrue(eventId) != 1) {
+            throw new IllegalArgumentException("Exactly one final round must be configured before publishing final results.");
         }
         List<EventRoundResult> drafts = roundResults.findByEventIdAndRoundIdOrderByDeclaredAtDesc(eventId, roundId);
         if (drafts.isEmpty()) {
@@ -206,8 +213,11 @@ public class EventRoundResultService {
             throw new IllegalArgumentException("This round result has been published. Editing is disabled.");
         }
         Event event = round.getEvent();
-        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus())) {
-            throw new IllegalArgumentException("Final results have been published. Event is completed. Editing is disabled.");
+        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus()) || "CANCELLED".equals(event.getStatus())) {
+            throw new IllegalArgumentException("This event is closed. Result editing is disabled.");
+        }
+        if (!Set.of("PUBLISHED", "ONGOING").contains(event.getStatus())) {
+            throw new IllegalArgumentException("Publish the event before entering round results.");
         }
     }
 

@@ -15,6 +15,7 @@ import Input from "@/components/ui/Input";
 import DataTable from "@/components/ui/DataTable";
 import BackButton from "@/components/ui/BackButton";
 import Badge from "@/components/ui/Badge";
+import { formatDateTime } from "@/lib/dateFormat";
 import {
   createAdminRound,
   createProblemStatement,
@@ -289,6 +290,10 @@ export default function AdminEventDetailPage() {
     setInchargeEdit({ primaryIncharge: assignment.primaryIncharge, responsibility: assignment.responsibility ?? "" });
   }
 
+  const eventClosed = Boolean(event && (event.resultsPublished || event.status === "COMPLETED" || event.status === "CANCELLED"));
+  const eventActive = Boolean(event && !eventClosed && (event.status === "PUBLISHED" || event.status === "ONGOING"));
+  const setupEditable = event?.status === "DRAFT" && !eventClosed;
+
   return (
     <AppShell expectedRole="SUPER_ADMIN" title="Event Detail">
       <PageHeader
@@ -296,7 +301,11 @@ export default function AdminEventDetailPage() {
         actions={(
           <>
             <BackButton fallbackHref="/admin/events" />
-            <Link href={`/admin/events/${id}/results`}><Button>Manage Results</Button></Link>
+            {event?.status === "COMPLETED" || event?.resultsPublished ? (
+              <Link href={`/admin/events/${id}/results`}><Button variant="secondary">View Final Results</Button></Link>
+            ) : eventActive ? (
+              <Link href={`/admin/events/${id}/results`}><Button>Manage Round Results</Button></Link>
+            ) : null}
           </>
         )}
       />
@@ -305,20 +314,31 @@ export default function AdminEventDetailPage() {
       {event ? (
         <div className="space-y-5">
           <EventSummary event={event} />
-          <EventSetupChecklist
-            event={event}
-            inchargeCount={incharges.length}
-            roundCount={rounds.length}
-            problemStatementCount={problemStatements.length}
-            mediaCount={mediaItems.length}
-          />
-          <div id="event-media">
-            <EventMediaManager eventId={id} mode="admin" eventCompleted={event.status === "COMPLETED" || event.resultsPublished} onItemsChange={setMediaItems} />
+          {eventClosed ? (
+            <p className="rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              This event is {event.status.toLowerCase()}. Event setup, registration, rounds, and results are read-only.
+            </p>
+          ) : null}
+          <nav className="sticky top-[68px] z-10 flex gap-2 overflow-x-auto rounded-xl border border-kec-border bg-white/95 p-2 shadow-sm backdrop-blur" aria-label="Event detail sections">
+            <a className="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-kec-purple hover:bg-kec-purple/10" href="#event-setup">Setup</a>
+            <a className="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-kec-purple hover:bg-kec-purple/10" href="#event-participation">Participation</a>
+            <a className="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-kec-purple hover:bg-kec-purple/10" href="#event-reports">Reports</a>
+            <a className="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-kec-purple hover:bg-kec-purple/10" href="#event-media">Archive</a>
+          </nav>
+          <div id="event-setup" className="scroll-mt-28">
+            <EventSetupChecklist
+              event={event}
+              inchargeCount={incharges.length}
+              roundCount={rounds.length}
+              finalRoundCount={rounds.filter((round) => round.finalRound).length}
+              problemStatementCount={problemStatements.length}
+              mediaCount={mediaItems.length}
+            />
           </div>
           <Card id="admin-controls">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-base font-bold text-kec-text">Faculty Incharges</h2>
-              <Link href={`/admin/event-incharges?eventId=${id}`}><Button type="button" variant="secondary">Add Incharge</Button></Link>
+              {!eventClosed ? <Link href={`/admin/event-incharges?eventId=${id}`}><Button type="button" variant="secondary">Manage Incharges</Button></Link> : null}
             </div>
             <div className="mt-4">
               <DataTable
@@ -336,9 +356,9 @@ export default function AdminEventDetailPage() {
                   editingInchargeId === assignment.assignmentId ? (
                     <Input key="responsibility" label="Responsibility" value={inchargeEdit.responsibility} onChange={(changeEvent) => setInchargeEdit({ ...inchargeEdit, responsibility: changeEvent.target.value })} />
                   ) : assignment.responsibility ?? "-",
-                  assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleString() : "-",
+                  formatDateTime(assignment.assignedAt),
                   <div key="actions" className="flex flex-wrap gap-2">
-                    {editingInchargeId === assignment.assignmentId ? (
+                    {eventClosed ? "Read-only" : editingInchargeId === assignment.assignmentId ? (
                       <>
                         <Button type="button" onClick={() => void saveIncharge(assignment.assignmentId)}>Save</Button>
                         <Button type="button" variant="secondary" onClick={() => setEditingInchargeId(null)}>Cancel</Button>
@@ -355,29 +375,32 @@ export default function AdminEventDetailPage() {
               />
             </div>
           </Card>
-          <Card>
+          <Card id="event-reports" className="scroll-mt-28">
             <h2 className="text-base font-bold text-kec-text">Admin Controls</h2>
-            <div className="mt-4 flex flex-wrap items-end gap-3">
-              <Select label="Status" value={event.status} onChange={(changeEvent) => void setStatus(changeEvent.target.value)}>
-                {["DRAFT", "PUBLISHED", "ONGOING", "COMPLETED", "CANCELLED"].map((status) => <option key={status}>{status}</option>)}
-              </Select>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={!event.registrationOpen && (event.status === "COMPLETED" || event.status === "CANCELLED")}
-                onClick={() => void toggleRegistration()}
-              >
-                {event.registrationOpen ? "Close Registration" : "Open Registration"}
-              </Button>
-            </div>
+            {eventClosed ? (
+              <p className="mt-2 text-sm text-kec-secondary">No lifecycle actions are available after an event is completed or cancelled.</p>
+            ) : (
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <Select label="Event Status" value={event.status} onChange={(changeEvent) => void setStatus(changeEvent.target.value)}>
+                  {event.status === "DRAFT" ? <option value="DRAFT">Draft</option> : null}
+                  {event.status === "DRAFT" || event.status === "PUBLISHED" ? <option value="PUBLISHED">Published</option> : null}
+                  {event.status === "PUBLISHED" || event.status === "ONGOING" ? <option value="ONGOING">Ongoing</option> : null}
+                </Select>
+                {event.status === "PUBLISHED" ? (
+                  <Button type="button" variant="secondary" onClick={() => void toggleRegistration()}>
+                    {event.registrationOpen ? "Close Registration" : "Open Registration"}
+                  </Button>
+                ) : null}
+              </div>
+            )}
           </Card>
           <Card>
             <h2 className="text-base font-bold text-kec-text">Reports</h2>
             <div className="mt-4 flex flex-wrap gap-3">
-              <Button type="button" loading={reportDownloading === "pdf"} onClick={() => void downloadReport("pdf", () => downloadAdminEventPdf(id))}>Download Event PDF</Button>
-              <Button type="button" variant="secondary" loading={reportDownloading === "students"} onClick={() => void downloadReport("students", () => downloadAdminEventStudentsExcel(id))}>Download Students Excel</Button>
-              <Button type="button" variant="secondary" loading={reportDownloading === "teams"} onClick={() => void downloadReport("teams", () => downloadAdminEventTeamsExcel(id))}>Download Teams Excel</Button>
-              <Button type="button" variant="secondary" loading={reportDownloading === "results"} onClick={() => void downloadReport("results", () => downloadAdminEventResultsExcel(id))}>Download Results Excel</Button>
+              <Button type="button" loading={reportDownloading === "pdf"} onClick={() => void downloadReport("pdf", () => downloadAdminEventPdf(id))}>Download Event Report (PDF)</Button>
+              <Button type="button" variant="secondary" loading={reportDownloading === "students"} onClick={() => void downloadReport("students", () => downloadAdminEventStudentsExcel(id))}>Download Participant List (Excel)</Button>
+              <Button type="button" variant="secondary" loading={reportDownloading === "teams"} onClick={() => void downloadReport("teams", () => downloadAdminEventTeamsExcel(id))}>Download Team List (Excel)</Button>
+              <Button type="button" variant="secondary" loading={reportDownloading === "results"} onClick={() => void downloadReport("results", () => downloadAdminEventResultsExcel(id))}>Download Result List (Excel)</Button>
             </div>
           </Card>
           <Card>
@@ -386,9 +409,9 @@ export default function AdminEventDetailPage() {
                 <h2 className="text-base font-bold text-kec-text">Problem Statements</h2>
                 <p className="mt-1 text-sm text-kec-secondary">Add event problem statements with multiple reference links.</p>
               </div>
-              {editingProblemId ? <Button type="button" variant="secondary" onClick={() => { setEditingProblemId(null); setProblemForm(emptyProblemForm()); }}>Cancel Edit</Button> : null}
+              {!eventClosed && editingProblemId ? <Button type="button" variant="secondary" onClick={() => { setEditingProblemId(null); setProblemForm(emptyProblemForm()); }}>Cancel Edit</Button> : null}
             </div>
-            <form className="mt-4 space-y-4 rounded-xl border border-kec-border p-4" onSubmit={handleSaveProblem}>
+            {!eventClosed ? <form className="mt-4 space-y-4 rounded-xl border border-kec-border p-4" onSubmit={handleSaveProblem}>
               <div className="grid gap-3 md:grid-cols-2">
                 <Input label="Title" value={problemForm.title} onChange={(changeEvent) => setProblemForm({ ...problemForm, title: changeEvent.target.value })} required />
                 <label className="flex items-end gap-2 pb-3 text-sm font-semibold text-kec-text">
@@ -417,7 +440,7 @@ export default function AdminEventDetailPage() {
                 </div>
               </div>
               <Button type="submit">{editingProblemId ? "Save Problem Statement" : "Add Problem Statement"}</Button>
-            </form>
+            </form> : <p className="mt-3 text-sm text-kec-secondary">Problem statements are retained for reference and cannot be changed after the event closes.</p>}
             <div className="mt-4">
               <DataTable
                 headers={["Title", "Description", "Links", "Status", "Actions"]}
@@ -430,7 +453,7 @@ export default function AdminEventDetailPage() {
                     </div>
                   ) : "-",
                   <Badge key="status" variant={item.active ? "success" : "default"}>{item.active ? "Active" : "Inactive"}</Badge>,
-                  <div key="actions" className="flex flex-wrap gap-2">
+                  eventClosed ? "Read-only" : <div key="actions" className="flex flex-wrap gap-2">
                     <Button type="button" variant="secondary" onClick={() => editProblem(item)}>Edit</Button>
                     <Button type="button" variant="secondary" onClick={() => void updateProblemStatementStatus(id, item.id, !item.active).then(load)}>{item.active ? "Deactivate" : "Activate"}</Button>
                     <Button type="button" variant="danger" onClick={() => void removeProblem(item.id)}>Delete</Button>
@@ -440,148 +463,138 @@ export default function AdminEventDetailPage() {
               />
             </div>
           </Card>
-          <section id="event-rounds" className="event-rounds-card">
-            <div className="event-rounds-header">
-              <div className="event-rounds-heading">
-                <div className="event-rounds-icon-box" aria-hidden="true">R</div>
-                <div>
-                  <h2 className="event-rounds-title">Event Rounds</h2>
-                  <p className="event-rounds-subtitle">Configure the flow of rounds for this event and publish results round-wise.</p>
-                </div>
-              </div>
+          <Card id="event-rounds" className="scroll-mt-28">
+            <div>
+              <h2 className="text-base font-bold text-kec-text">Event Rounds</h2>
+              <p className="mt-1 text-sm text-kec-secondary">Configure the round order and publish each result separately.</p>
             </div>
 
-            <form className="event-rounds-form-card" onSubmit={handleCreateRound}>
-              <div>
-                <h3 className="event-rounds-section-title">Add New Round</h3>
-                <p className="event-rounds-section-subtitle">Define round details and the order of progression</p>
-              </div>
-              <div className="event-rounds-form-grid">
-                <label className="event-rounds-field">
-                  <span>Round Name</span>
-                  <input
+            {setupEditable ? (
+              <form className="mt-4 rounded-xl border border-kec-border p-4" onSubmit={handleCreateRound}>
+                <div>
+                  <h3 className="text-sm font-bold text-kec-text">Add New Round</h3>
+                  <p className="mt-1 text-sm text-kec-secondary">Define the round name, order, and whether it is the final round.</p>
+                </div>
+                <div className="mt-4 grid items-end gap-3 md:grid-cols-[minmax(0,2fr)_minmax(120px,0.7fr)_auto_auto]">
+                  <Input
                     id="event-rounds-round-name"
-                    className="event-rounds-input"
+                    label="Round Name"
                     placeholder="e.g. Prelims"
                     value={roundName}
                     onChange={(changeEvent) => setRoundName(changeEvent.target.value)}
                     required
                   />
-                </label>
-                <label className="event-rounds-field">
-                  <span>Order</span>
-                  <input
-                    className="event-rounds-input"
+                  <Input
+                    label="Order"
                     type="number"
                     min="1"
                     value={roundOrder}
                     onChange={(changeEvent) => setRoundOrder(changeEvent.target.value)}
                     required
                   />
-                </label>
-                <label className="event-rounds-toggle-row">
-                  <button
-                    className={`event-rounds-toggle ${roundFinal ? "event-rounds-toggle-on" : ""}`}
-                    type="button"
-                    role="switch"
-                    aria-checked={roundFinal}
-                    onClick={() => setRoundFinal((current) => !current)}
-                  >
-                    <span />
-                  </button>
-                  <span>Final Round</span>
-                </label>
-                <button className="event-rounds-save-btn" type="submit">Save Round</button>
+                  <label className="flex min-h-10 items-center gap-2 text-sm font-semibold text-kec-text">
+                    <button
+                      className={`event-rounds-toggle ${roundFinal ? "event-rounds-toggle-on" : ""}`}
+                      type="button"
+                      role="switch"
+                      aria-checked={roundFinal}
+                      aria-label="Final round"
+                      onClick={() => setRoundFinal((current) => !current)}
+                    >
+                      <span />
+                    </button>
+                    <span>Final Round</span>
+                  </label>
+                  <Button type="submit">Save Round</Button>
+                </div>
+              </form>
+            ) : (
+              <div className="mt-4 rounded-lg border border-kec-border bg-slate-50 p-3">
+                <h3 className="text-sm font-bold text-kec-text">Round Structure Locked</h3>
+                <p className="mt-1 text-sm text-kec-secondary">Round names, order, and final-round selection can be changed only while the event is in Draft.</p>
               </div>
-            </form>
+            )}
 
-            <div className="event-rounds-configured">
-              <div>
-                <h3 className="event-rounds-section-title">Configured Rounds</h3>
-                <p className="event-rounds-section-subtitle">Manage and publish results for each round</p>
-              </div>
+            <div className="mt-5">
+              <h3 className="text-sm font-bold text-kec-text">Configured Rounds</h3>
+              <p className="mt-1 text-sm text-kec-secondary">Review progress and use the available action for each round.</p>
+
               {rounds.length ? (
-                <div className="event-rounds-timeline">
+                <div className="mt-3 space-y-3">
                   {[...rounds].sort((first, second) => first.roundOrder - second.roundOrder).map((round, index) => (
-                    <article className={`event-rounds-item ${round.finalRound ? "event-rounds-item-final" : ""}`} key={round.id}>
-                      <div className="event-rounds-marker">{index + 1}</div>
-                      <div className="event-rounds-item-card">
-                        <div className="event-rounds-round-main">
-                          <div className="event-rounds-round-icon" aria-hidden="true">{round.finalRound ? "F" : round.status === "COMPLETED" ? "C" : "R"}</div>
-                          <div>
-                            <div className="event-rounds-round-title-row">
-                              <h4 className="event-rounds-round-title">{round.roundName}</h4>
-                              <span className="event-rounds-badge event-rounds-badge-order">Order: {round.roundOrder}</span>
+                    <article
+                      className={`rounded-xl border p-4 ${round.finalRound ? "border-amber-200 bg-amber-50/40" : "border-kec-border bg-white"}`}
+                      key={round.id}
+                    >
+                      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] lg:items-center">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-kec-purple/10 text-sm font-bold text-kec-purple" aria-hidden="true">
+                            {index + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-sm font-bold text-kec-text">{round.roundName}</h4>
+                              <Badge>Order {round.roundOrder}</Badge>
+                              <Badge variant={round.finalRound ? "warning" : "default"}>{round.finalRound ? "Final Round" : "Not Final"}</Badge>
                             </div>
-                            <div className="event-rounds-badge-row">
-                              <span className={`event-rounds-badge ${round.finalRound ? "event-rounds-badge-final" : "event-rounds-badge-neutral"}`}>
-                                {round.finalRound ? "Final Round" : "Not Final"}
-                              </span>
-                              <span className={`event-rounds-badge ${statusBadgeClass(round.status)}`}>{statusLabel(round.status)}</span>
-                              <span className={`event-rounds-badge ${round.resultPublished ? "event-rounds-badge-success" : "event-rounds-badge-danger"}`}>
-                                {round.resultPublished ? "Published" : "Not Published"}
-                              </span>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <Badge variant={round.status === "COMPLETED" ? "success" : round.status === "CANCELLED" ? "error" : round.status === "ONGOING" ? "info" : "default"}>
+                                {statusLabel(round.status)}
+                              </Badge>
+                              <Badge variant={round.resultPublished ? "success" : "error"}>{round.resultPublished ? "Result Published" : "Result Not Published"}</Badge>
                             </div>
                           </div>
                         </div>
 
-                        <div className="event-rounds-meta-grid">
+                        <dl className="grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="event-rounds-meta-label">Status</p>
-                            <select
-                              id={`event-rounds-status-${round.id}`}
-                              className="event-rounds-select"
-                              value={round.status}
-                              disabled={round.resultPublished}
-                              onChange={(changeEvent) => void handleRoundStatus(round.id, changeEvent.target.value)}
+                            <dt className="text-xs font-semibold text-kec-muted">Result</dt>
+                            <dd className="mt-1 font-medium text-kec-text">{round.resultPublished ? "Published and locked" : "Awaiting publication"}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-semibold text-kec-muted">Published At</dt>
+                            <dd className="mt-1 font-medium text-kec-text">{formatDateTime(round.resultPublishedAt, "Not published")}</dd>
+                          </div>
+                        </dl>
+
+                        <div className="flex flex-wrap gap-2 lg:justify-end">
+                          {round.status === "NOT_STARTED" && eventActive ? (
+                            <Button variant="secondary" type="button" onClick={() => void handleRoundStatus(round.id, "ONGOING")}>Start Round</Button>
+                          ) : null}
+                          {round.status === "ONGOING" && eventActive ? (
+                            <Button
+                              type="button"
+                              loading={publishingRoundId === round.id}
+                              onClick={() => void handlePublishRound(round)}
                             >
-                              {["NOT_STARTED", "ONGOING", "COMPLETED", "CANCELLED"].map((status) => <option key={status}>{status}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <p className="event-rounds-meta-label">Result</p>
-                            <p className="event-rounds-meta-value">{round.resultPublished ? "Published / Locked" : "Awaiting publish"}</p>
-                          </div>
-                          <div>
-                            <p className="event-rounds-meta-label">Published At</p>
-                            <p className="event-rounds-meta-value">{round.resultPublishedAt ? new Date(round.resultPublishedAt).toLocaleString() : "-"}</p>
-                          </div>
-                        </div>
-
-                        <div className="event-rounds-actions">
-                          <button
-                            className="event-rounds-action-btn event-rounds-action-primary"
-                            type="button"
-                            disabled={round.resultPublished || (round.finalRound && event.resultsPublished)}
-                            onClick={() => void handlePublishRound(round)}
-                          >
-                            {publishingRoundId === round.id ? "Publishing..." : round.finalRound ? "Publish Final Result" : "Publish Result"}
-                          </button>
+                              {round.finalRound ? "Publish Final Result" : "Publish Round Result"}
+                            </Button>
+                          ) : null}
+                          {round.resultPublished ? <span className="self-center text-xs font-semibold text-green-700">Editing locked</span> : null}
                         </div>
                       </div>
                     </article>
                   ))}
                 </div>
               ) : (
-                <div className="event-rounds-empty">
-              <div className="event-rounds-empty-icon" aria-hidden="true">+</div>
-                  <p>No rounds configured yet</p>
-                  <span>Add the first round to define how this event will progress.</span>
+                <div className="mt-3 rounded-lg border border-dashed border-kec-border px-4 py-8 text-center">
+                  <p className="text-sm font-semibold text-kec-text">No rounds configured yet</p>
+                  <p className="mt-1 text-sm text-kec-secondary">Add the first round to define how this event will progress.</p>
                 </div>
               )}
             </div>
 
-            <div className="event-rounds-info-box">
-              <div className="event-rounds-info-icon" aria-hidden="true">i</div>
-              <div>
-                <h3>How it works</h3>
-                <p>Rounds will be displayed to participants in the order specified. Results can be published for each round individually. Only the final round allows winner selection.</p>
-              </div>
+            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <h3 className="text-sm font-bold text-blue-900">How it works</h3>
+              <p className="mt-1 text-sm leading-6 text-blue-800">Rounds appear to participants in the configured order. Publish each round separately; only the final round allows winner selection.</p>
             </div>
-          </section>
-          <div>
+          </Card>
+          <div id="event-participation" className="scroll-mt-28">
             <h2 className="mb-4 text-base font-bold text-kec-text">Event Registrations</h2>
             <EventRegistrationsTable registrations={registrations} />
+          </div>
+          <div id="event-media" className="scroll-mt-28">
+            <EventMediaManager eventId={id} mode="admin" eventCompleted={event.status === "COMPLETED" || event.resultsPublished} readOnly={event.status === "CANCELLED"} onItemsChange={setMediaItems} />
           </div>
         </div>
       ) : (
@@ -597,43 +610,44 @@ export default function AdminEventDetailPage() {
   );
 }
 
-function EventSetupChecklist({ event, inchargeCount, roundCount, problemStatementCount, mediaCount }: { event: EventDetail; inchargeCount: number; roundCount: number; problemStatementCount: number; mediaCount: number }) {
+function EventSetupChecklist({ event, inchargeCount, roundCount, finalRoundCount, problemStatementCount, mediaCount }: { event: EventDetail; inchargeCount: number; roundCount: number; finalRoundCount: number; problemStatementCount: number; mediaCount: number }) {
+  const eventClosed = event.status === "COMPLETED" || event.status === "CANCELLED" || event.resultsPublished;
   const items = [
     {
       label: "Poster/Flyer uploaded",
       complete: Boolean(event.posterImageUrl),
-      href: `/admin/events/${event.id}/edit`,
-      action: "Upload poster"
+      href: eventClosed ? null : `/admin/events/${event.id}/edit`,
+      action: event.posterImageUrl ? "Review poster" : "Upload poster"
     },
     {
       label: "Faculty incharges assigned",
       complete: inchargeCount > 0,
-      href: `/admin/event-incharges?eventId=${event.id}`,
-      action: "Assign faculty"
+      href: eventClosed ? null : `/admin/event-incharges?eventId=${event.id}`,
+      action: inchargeCount > 0 ? "Review faculty" : "Assign faculty"
     },
     {
-      label: "Rounds configured",
-      complete: roundCount > 0,
+      label: "Rounds configured with one final",
+      complete: roundCount > 0 && finalRoundCount === 1,
       href: "#event-rounds",
-      action: "Add rounds"
+      action: roundCount > 0 ? "Review rounds" : "Add rounds"
     },
     {
       label: "Problem statements added",
       complete: problemStatementCount > 0,
       href: "#problem-statements",
-      action: "Add problem"
+      action: problemStatementCount > 0 ? "Review problems" : "Add problem"
     },
     {
       label: "Registration status set",
       complete: event.registrationOpen || event.status === "COMPLETED" || event.status === "CANCELLED",
-      href: "#admin-controls",
+      href: eventClosed ? null : "#admin-controls",
       action: "Review status"
     },
     {
       label: "Results published",
       complete: event.resultsPublished,
       href: `/admin/events/${event.id}/results`,
-      action: "Manage results"
+      action: event.resultsPublished ? "View results" : "Manage results"
     },
     {
       label: "Post-event media uploaded",
@@ -658,15 +672,17 @@ function EventSetupChecklist({ event, inchargeCount, roundCount, problemStatemen
         {items.map((item) => (
           <div key={item.label} className="flex items-start justify-between gap-3 rounded-xl border border-kec-border bg-slate-50 px-4 py-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${item.complete ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                  {item.complete ? "Y" : "!"}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-bold ${item.complete ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                  {item.complete ? "Complete" : "Missing"}
                 </span>
                 <p className="text-sm font-semibold text-kec-text">{item.label}</p>
               </div>
               <p className="mt-1 text-xs text-kec-secondary">{item.complete ? "Ready" : "Needs attention"}</p>
             </div>
-            <Link className="shrink-0 text-xs font-semibold text-kec-purple hover:text-kec-purpleHover" href={item.href}>{item.action}</Link>
+            {item.href ? <Link className="shrink-0 text-xs font-semibold text-kec-purple hover:text-kec-purpleHover" href={item.href}>{item.action}</Link> : (
+              <span className="shrink-0 text-xs font-semibold text-kec-muted">Read-only</span>
+            )}
           </div>
         ))}
       </div>
@@ -703,18 +719,5 @@ function statusLabel(status: string) {
   if (status === "NOT_STARTED") {
     return "Upcoming";
   }
-  return status.replaceAll("_", " ");
-}
-
-function statusBadgeClass(status: string) {
-  if (status === "COMPLETED") {
-    return "event-rounds-badge-success";
-  }
-  if (status === "CANCELLED") {
-    return "event-rounds-badge-danger";
-  }
-  if (status === "ONGOING") {
-    return "event-rounds-badge-info";
-  }
-  return "event-rounds-badge-neutral";
+  return status.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

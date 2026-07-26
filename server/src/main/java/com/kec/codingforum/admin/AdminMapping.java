@@ -22,13 +22,17 @@ final class AdminMapping {
 
     static StudentDto studentDto(Student student, UserRepository users) {
         Long linkedUserId = users.findByStudentId(student.getId()).map(user -> user.getId()).orElse(null);
+        return studentDto(student, linkedUserId, student.getYear());
+    }
+
+    static StudentDto studentDto(Student student, Long linkedUserId, Integer currentYear) {
         return new StudentDto(
                 student.getId(),
                 student.getRegisterNumber(),
                 student.getName(),
                 student.getEmail(),
                 departmentSummary(student.getDepartment()),
-                student.getYear(),
+                currentYear,
                 student.getSection(),
                 student.getTechnicalArea(),
                 student.isPlacementWilling(),
@@ -39,6 +43,10 @@ final class AdminMapping {
 
     static FacultyDto facultyDto(Faculty faculty, UserRepository users) {
         Long linkedUserId = users.findByFacultyId(faculty.getId()).map(user -> user.getId()).orElse(null);
+        return facultyDto(faculty, linkedUserId);
+    }
+
+    static FacultyDto facultyDto(Faculty faculty, Long linkedUserId) {
         return new FacultyDto(
                 faculty.getId(),
                 faculty.getFacultyCode(),

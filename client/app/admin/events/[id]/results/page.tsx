@@ -12,7 +12,7 @@ export default function AdminEventResultsPage() {
 
   return (
     <AppShell expectedRole="SUPER_ADMIN" title="Event Results">
-      <PageHeader title="Event Results" subtitle="Declare final results and generate student points." actions={<BackButton fallbackHref={`/admin/events/${eventId}`} />} />
+      <PageHeader title="Round Results" subtitle="Review round shortlists and publish final positions from the configured final round." actions={<BackButton fallbackHref={`/admin/events/${eventId}`} />} />
       <EventResultsManager eventId={eventId} mode="admin" />
     </AppShell>
   );

@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class StudentAdminService {
@@ -57,8 +60,14 @@ public class StudentAdminService {
             Boolean placementWilling,
             Boolean active
     ) {
-        return students.findAll(studentSpec(search, departmentId, year, section, technicalArea, placementWilling, active), pageable)
-                .map(student -> AdminMapping.studentDto(student, users));
+        Page<Student> studentPage = students.findAll(studentSpec(search, departmentId, year, section, technicalArea, placementWilling, active), pageable);
+        Map<Long, User> linkedUsers = users.findByStudentIdIn(studentPage.getContent().stream().map(Student::getId).toList()).stream()
+                .collect(Collectors.toMap(user -> user.getStudent().getId(), Function.identity()));
+        return studentPage.map(student -> AdminMapping.studentDto(
+                student,
+                linkedUsers.containsKey(student.getId()) ? linkedUsers.get(student.getId()).getId() : null,
+                studentYearService.resolveYear(student.getRegisterNumber(), student.getYear())
+        ));
     }
 
     @Transactional

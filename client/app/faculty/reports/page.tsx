@@ -31,17 +31,15 @@ export default function FacultyReportsPage() {
   const [toDate, setToDate] = useState("");
   const [downloading, setDownloading] = useState("");
   const [error, setError] = useState("");
+  const [eventAccessError, setEventAccessError] = useState("");
   const user = getCurrentUser();
 
   useEffect(() => {
     async function load() {
-      try {
-        const [eventList, categoryList] = await Promise.all([getFacultyEvents(), getEventCategories()]);
-        setEvents(eventList);
-        setCategories(categoryList);
-      } catch (exception) {
-        setError(exception instanceof Error ? exception.message : "Unable to load report options.");
-      }
+      const [eventResult, categoryResult] = await Promise.allSettled([getFacultyEvents(), getEventCategories()]);
+      if (eventResult.status === "fulfilled") setEvents(eventResult.value);
+      else setEventAccessError(eventResult.reason instanceof Error ? eventResult.reason.message : "Assigned event reports are unavailable.");
+      if (categoryResult.status === "fulfilled") setCategories(categoryResult.value);
     }
     void load();
   }, []);
@@ -68,16 +66,18 @@ export default function FacultyReportsPage() {
       <div className="grid gap-5 xl:grid-cols-2">
         <Card>
           <h2 className="text-base font-bold text-kec-text">Assigned Event Reports</h2>
-          <Select className="mt-4" label="Event" value={eventId} onChange={(event) => setEventId(event.target.value)}>
+          {eventAccessError ? (
+            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{eventAccessError}</p>
+          ) : <><Select className="mt-4" label="Event" value={eventId} onChange={(event) => setEventId(event.target.value)}>
             <option value="">Select assigned event</option>
             {events.map((event) => <option key={event.id} value={event.id}>{event.title}</option>)}
           </Select>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Button type="button" disabled={!eventId} loading={downloading === "event-pdf"} onClick={() => void runDownload("event-pdf", () => downloadFacultyEventPdf(selectedEventId))}>Event PDF Report</Button>
-            <Button type="button" variant="secondary" disabled={!eventId} loading={downloading === "event-students"} onClick={() => void runDownload("event-students", () => downloadFacultyEventStudentsExcel(selectedEventId))}>Student List Excel</Button>
-            <Button type="button" variant="secondary" disabled={!eventId} loading={downloading === "event-teams"} onClick={() => void runDownload("event-teams", () => downloadFacultyEventTeamsExcel(selectedEventId))}>Team List Excel</Button>
-            <Button type="button" variant="secondary" disabled={!eventId} loading={downloading === "event-results"} onClick={() => void runDownload("event-results", () => downloadFacultyEventResultsExcel(selectedEventId))}>Results Excel</Button>
-          </div>
+            <Button type="button" className="w-full" disabled={!eventId} loading={downloading === "event-pdf"} onClick={() => void runDownload("event-pdf", () => downloadFacultyEventPdf(selectedEventId))}>Download Event Report (PDF)</Button>
+            <Button type="button" className="w-full" variant="secondary" disabled={!eventId} loading={downloading === "event-students"} onClick={() => void runDownload("event-students", () => downloadFacultyEventStudentsExcel(selectedEventId))}>Download Participant List (Excel)</Button>
+            <Button type="button" className="w-full" variant="secondary" disabled={!eventId} loading={downloading === "event-teams"} onClick={() => void runDownload("event-teams", () => downloadFacultyEventTeamsExcel(selectedEventId))}>Download Team List (Excel)</Button>
+            <Button type="button" className="w-full" variant="secondary" disabled={!eventId} loading={downloading === "event-results"} onClick={() => void runDownload("event-results", () => downloadFacultyEventResultsExcel(selectedEventId))}>Download Result List (Excel)</Button>
+          </div></>}
         </Card>
 
         <Card>
@@ -95,8 +95,8 @@ export default function FacultyReportsPage() {
                 </div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Button type="button" loading={downloading === "department-pdf"} onClick={() => void runDownload("department-pdf", () => downloadFacultyDepartmentPdf(filters))}>Department PDF</Button>
-                <Button type="button" variant="secondary" loading={downloading === "department-students"} onClick={() => void runDownload("department-students", () => downloadFacultyDepartmentStudentsExcel(filters))}>Department Student Excel</Button>
+                <Button type="button" className="w-full" loading={downloading === "department-pdf"} onClick={() => void runDownload("department-pdf", () => downloadFacultyDepartmentPdf(filters))}>Download Department Report (PDF)</Button>
+                <Button type="button" className="w-full" variant="secondary" loading={downloading === "department-students"} onClick={() => void runDownload("department-students", () => downloadFacultyDepartmentStudentsExcel(filters))}>Download Department Participants (Excel)</Button>
               </div>
             </>
           ) : (

@@ -6,6 +6,8 @@ import java.util.List;
 
 public interface StudentPointRepository extends JpaRepository<StudentPoint, Long> {
 
+    boolean existsByEventId(Long eventId);
+
     void deleteByReason(String reason);
 
     void deleteByStudentIdAndEventIdAndReason(Long studentId, Long eventId, String reason);

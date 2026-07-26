@@ -3,6 +3,7 @@ import type { UserRole } from "./api";
 export type NavItem = {
   label: string;
   href: string;
+  group?: string;
 };
 
 export const roleNavigation: Record<UserRole, NavItem[]> = {
@@ -26,17 +27,17 @@ export const roleNavigation: Record<UserRole, NavItem[]> = {
     { label: "Profile", href: "/faculty/profile" }
   ],
   SUPER_ADMIN: [
-    { label: "Dashboard", href: "/admin/dashboard" },
-    { label: "Events", href: "/admin/events" },
-    { label: "Categories", href: "/admin/categories" },
-    { label: "Departments", href: "/admin/departments" },
-    { label: "Students", href: "/admin/students" },
-    { label: "Faculty", href: "/admin/faculty" },
-    { label: "Event Incharges", href: "/admin/event-incharges" },
-    { label: "Leaderboard", href: "/admin/leaderboard" },
-    { label: "Reports", href: "/admin/reports" },
-    { label: "Notifications", href: "/admin/notifications" },
-    { label: "Analytics", href: "/admin/analytics" }
+    { label: "Dashboard", href: "/admin/dashboard", group: "Overview" },
+    { label: "Events", href: "/admin/events", group: "Event Setup" },
+    { label: "Categories", href: "/admin/categories", group: "Event Setup" },
+    { label: "Event Incharges", href: "/admin/event-incharges", group: "Event Setup" },
+    { label: "Departments", href: "/admin/departments", group: "People" },
+    { label: "Students", href: "/admin/students", group: "People" },
+    { label: "Faculty", href: "/admin/faculty", group: "People" },
+    { label: "Leaderboard", href: "/admin/leaderboard", group: "Performance" },
+    { label: "Analytics", href: "/admin/analytics", group: "Performance" },
+    { label: "Reports", href: "/admin/reports", group: "Performance" },
+    { label: "Notifications", href: "/admin/notifications", group: "Communication" }
   ]
 };
 

@@ -15,23 +15,27 @@ public class FacultyEventService {
     private final EventRepository events;
     private final EventRoundRepository rounds;
     private final EventProblemStatementRepository problemStatements;
+    private final EventLifecycleService lifecycleService;
 
-    public FacultyEventService(EventRepository events, EventRoundRepository rounds, EventProblemStatementRepository problemStatements) {
+    public FacultyEventService(EventRepository events, EventRoundRepository rounds, EventProblemStatementRepository problemStatements, EventLifecycleService lifecycleService) {
         this.events = events;
         this.rounds = rounds;
         this.problemStatements = problemStatements;
+        this.lifecycleService = lifecycleService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<EventListItemDto> listAssigned() {
+        lifecycleService.syncCurrentLifecycle();
         Long facultyId = SecurityUtils.getCurrentFacultyId();
         return events.findByInchargesIdOrderByStartDatetimeDesc(facultyId).stream()
                 .map(event -> EventMapper.listItem(event, rounds.countByEventId(event.getId()), problemStatements.countByEventIdAndActiveTrue(event.getId())))
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public EventDetailDto getAssigned(Long id) {
+        lifecycleService.syncCurrentLifecycle();
         Long facultyId = SecurityUtils.getCurrentFacultyId();
         Event event = events.findByIdAndInchargesId(id, facultyId)
                 .orElseThrow(() -> new AccessDeniedException("This event is not assigned to you."));

@@ -12,6 +12,7 @@ import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import BackButton from "@/components/ui/BackButton";
 import { cancelEvent, getAdminEvents, getEventCategories, type EventCategory, type EventItem } from "@/lib/api";
+import { formatDateTime } from "@/lib/dateFormat";
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -19,31 +20,46 @@ export default function AdminEventsPage() {
   const [filters, setFilters] = useState({ search: "", categoryId: "", eventType: "", status: "", registrationOpen: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageInfo, setPageInfo] = useState({ totalElements: 0, totalPages: 0 });
 
   useEffect(() => {
     void getEventCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
 
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async (requestedPage = pageIndex) => {
     setLoading(true);
     setError("");
     try {
-      const page = await getAdminEvents({ page: 0, size: 20, ...filters });
+      const page = await getAdminEvents({ page: requestedPage, size: 10, ...filters });
       setEvents(page.content);
+      setPageInfo({ totalElements: page.totalElements, totalPages: page.totalPages });
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to load events.");
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, pageIndex]);
 
   useEffect(() => {
-    void loadEvents();
-  }, [loadEvents]);
+    const timer = window.setTimeout(() => void loadEvents(pageIndex), 300);
+    return () => window.clearTimeout(timer);
+  }, [loadEvents, pageIndex]);
+
+  function updateFilter(name: keyof typeof filters, value: string) {
+    setPageIndex(0);
+    setFilters((current) => ({ ...current, [name]: value }));
+  }
 
   async function handleCancel(id: number) {
-    await cancelEvent(id);
-    await loadEvents();
+    if (!window.confirm("Cancel this event? Registration will close and this action cannot be reversed.")) return;
+    setError("");
+    try {
+      await cancelEvent(id);
+      await loadEvents(pageIndex);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Unable to cancel event.");
+    }
   }
 
   return (
@@ -61,21 +77,21 @@ export default function AdminEventsPage() {
       {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       <Card className="mb-5">
         <div className="grid gap-3 md:grid-cols-5">
-          <Input label="Search" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
-          <Select label="Category" value={filters.categoryId} onChange={(event) => setFilters({ ...filters, categoryId: event.target.value })}>
+          <Input label="Search" value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} />
+          <Select label="Category" value={filters.categoryId} onChange={(event) => updateFilter("categoryId", event.target.value)}>
             <option value="">All</option>
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </Select>
-          <Select label="Event Type" value={filters.eventType} onChange={(event) => setFilters({ ...filters, eventType: event.target.value })}>
+          <Select label="Event Type" value={filters.eventType} onChange={(event) => updateFilter("eventType", event.target.value)}>
             <option value="">All</option>
             <option value="INDIVIDUAL">Individual</option>
             <option value="TEAM">Team</option>
           </Select>
-          <Select label="Status" value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
+          <Select label="Status" value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
             <option value="">All</option>
-            {["DRAFT", "PUBLISHED", "ONGOING", "COMPLETED", "CANCELLED"].map((status) => <option key={status}>{status}</option>)}
+            {["DRAFT", "PUBLISHED", "ONGOING", "COMPLETED", "CANCELLED"].map((status) => <option key={status} value={status}>{formatStatus(status)}</option>)}
           </Select>
-          <Select label="Registration" value={filters.registrationOpen} onChange={(event) => setFilters({ ...filters, registrationOpen: event.target.value })}>
+          <Select label="Registration" value={filters.registrationOpen} onChange={(event) => updateFilter("registrationOpen", event.target.value)}>
             <option value="">All</option>
             <option value="true">Open</option>
             <option value="false">Closed</option>
@@ -88,19 +104,32 @@ export default function AdminEventsPage() {
           rows={events.map((event) => [
             event.title,
             event.category?.name ?? "-",
-            <Badge key="type" variant="purple">{event.eventType}</Badge>,
-            <Badge key="status" variant={event.status === "CANCELLED" ? "error" : "info"}>{event.status}</Badge>,
+            <Badge key="type" variant="purple">{formatStatus(event.eventType)}</Badge>,
+            <Badge key="status" variant={event.status === "CANCELLED" ? "error" : event.status === "COMPLETED" ? "success" : "info"}>{formatStatus(event.status)}</Badge>,
             event.registrationOpen ? "Open" : "Closed",
-            event.startDatetime ? new Date(event.startDatetime).toLocaleString() : "-",
+            formatDateTime(event.startDatetime),
             <div key="actions" className="flex flex-wrap gap-2">
               <Link href={`/admin/events/${event.id}`}><Button type="button" variant="secondary">View</Button></Link>
-              <Link href={`/admin/events/${event.id}/edit`}><Button type="button" variant="secondary">Edit</Button></Link>
-              <Button type="button" variant="danger" onClick={() => void handleCancel(event.id)}>Cancel</Button>
+              {!event.resultsPublished && event.status !== "COMPLETED" && event.status !== "CANCELLED" ? <Link href={`/admin/events/${event.id}/edit`}><Button type="button" variant="secondary">Edit</Button></Link> : null}
+              {!event.resultsPublished && event.status !== "COMPLETED" && event.status !== "CANCELLED" ? <Button type="button" variant="danger" onClick={() => void handleCancel(event.id)}>Cancel Event</Button> : null}
             </div>
           ])}
           emptyMessage="No events found."
         />
       )}
+      {!loading && pageInfo.totalPages > 1 ? (
+        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-kec-border bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-kec-secondary">Page {pageIndex + 1} of {pageInfo.totalPages} ({pageInfo.totalElements} events)</p>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" disabled={pageIndex === 0} onClick={() => setPageIndex((page) => Math.max(0, page - 1))}>Previous</Button>
+            <Button type="button" variant="secondary" disabled={pageIndex + 1 >= pageInfo.totalPages} onClick={() => setPageIndex((page) => page + 1)}>Next</Button>
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   );
+}
+
+function formatStatus(value: string) {
+  return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

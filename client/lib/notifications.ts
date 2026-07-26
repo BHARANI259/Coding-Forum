@@ -1,4 +1,5 @@
 import { API_BASE_URL, type NotificationItem, type UserRole } from "./api";
+import { formatDate } from "@/lib/dateFormat";
 
 export function notificationsPathForRole(role: UserRole) {
   if (role === "STUDENT") {
@@ -63,5 +64,5 @@ export function shortTime(value: string) {
   if (diffHours < 24) {
     return `${diffHours}h ago`;
   }
-  return new Date(value).toLocaleDateString();
+  return formatDate(value);
 }

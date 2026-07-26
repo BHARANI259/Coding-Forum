@@ -22,15 +22,17 @@ import {
   type EventMedia,
   type EventMediaType
 } from "@/lib/api/eventMedia";
+import { formatDateTime } from "@/lib/dateFormat";
 
 type EventMediaManagerProps = {
   eventId: number;
   mode: "admin" | "faculty";
   eventCompleted?: boolean;
+  readOnly?: boolean;
   onItemsChange?: (items: EventMedia[]) => void;
 };
 
-export default function EventMediaManager({ eventId, mode, eventCompleted = false, onItemsChange }: EventMediaManagerProps) {
+export default function EventMediaManager({ eventId, mode, eventCompleted = false, readOnly = false, onItemsChange }: EventMediaManagerProps) {
   const [items, setItems] = useState<EventMedia[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [mediaType, setMediaType] = useState<EventMediaType>("PHOTO");
@@ -42,7 +44,7 @@ export default function EventMediaManager({ eventId, mode, eventCompleted = fals
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const currentUser = useMemo(() => getCurrentUser(), []);
-  const canUpload = mode === "admin" || eventCompleted;
+  const canUpload = !readOnly && (mode === "admin" || eventCompleted);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -139,7 +141,7 @@ export default function EventMediaManager({ eventId, mode, eventCompleted = fals
   }
 
   function canManage(item: EventMedia) {
-    return mode === "admin" || item.uploadedByUserId === currentUser?.userId;
+    return !readOnly && (mode === "admin" || item.uploadedByUserId === currentUser?.userId);
   }
 
   return (
@@ -148,7 +150,8 @@ export default function EventMediaManager({ eventId, mode, eventCompleted = fals
         <div>
           <h2 className="text-base font-bold text-kec-text">{mode === "admin" ? "Event Media / Post-Event Gallery" : "Post-Event Media"}</h2>
           <p className="mt-1 text-sm text-kec-secondary">
-            {mode === "admin"
+            {readOnly ? "This cancelled event is read-only. Existing evidence remains available for review."
+              : mode === "admin"
               ? "Faculty can upload media only after completion. SuperAdmin can upload for correction/admin purposes."
               : canUpload
                 ? "Upload post-event proof photos, screenshots, and winner images for archive and reports."
@@ -160,11 +163,11 @@ export default function EventMediaManager({ eventId, mode, eventCompleted = fals
       {error ? <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       {success ? <p className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</p> : null}
 
-      <form className="mt-4 grid gap-4 rounded-xl border border-kec-border p-4 lg:grid-cols-[1fr_220px_1fr_auto]" onSubmit={upload}>
+      <form className="mt-4 grid gap-4 rounded-xl border border-kec-border p-3 sm:p-4 lg:grid-cols-[1fr_220px_1fr_auto]" onSubmit={upload}>
         <label className="block">
           <span className="text-sm font-semibold text-kec-text">Images</span>
           <input
-            className="mt-2 block w-full rounded-lg border border-kec-border px-3 py-2 text-sm"
+            className="mt-2 block w-full rounded-lg border border-kec-border px-3 py-2 text-base file:mr-3 file:rounded-md file:border-0 file:bg-kec-purple file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white sm:text-sm"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             multiple
@@ -177,7 +180,7 @@ export default function EventMediaManager({ eventId, mode, eventCompleted = fals
           {eventMediaTypes.map((type) => <option key={type} value={type}>{labelType(type)}</option>)}
         </Select>
         <Input label="Caption" value={caption} disabled={!canUpload || saving} onChange={(event) => setCaption(event.target.value)} />
-        <Button className="self-end" type="submit" loading={saving} disabled={!canUpload}>Upload</Button>
+        <Button className="w-full self-end lg:w-auto" type="submit" loading={saving} disabled={!canUpload}>Upload</Button>
       </form>
 
       {loading ? <p className="mt-5 text-sm text-kec-secondary">Loading event media...</p> : null}
@@ -202,20 +205,20 @@ export default function EventMediaManager({ eventId, mode, eventCompleted = fals
                     {eventMediaTypes.map((type) => <option key={type} value={type}>{labelType(type)}</option>)}
                   </Select>
                   <Input label="Caption" value={editForm.caption} onChange={(event) => setEditForm({ ...editForm, caption: event.target.value })} />
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" loading={saving} onClick={() => void saveEdit(item.id)}>Save</Button>
-                    <Button type="button" variant="secondary" onClick={() => setEditingId(null)}>Cancel</Button>
+                  <div className="grid gap-2 sm:flex sm:flex-wrap">
+                    <Button type="button" className="w-full sm:w-auto" loading={saving} onClick={() => void saveEdit(item.id)}>Save</Button>
+                    <Button type="button" className="w-full sm:w-auto" variant="secondary" onClick={() => setEditingId(null)}>Cancel</Button>
                   </div>
                 </div>
               ) : (
                 <>
                   <p className="text-sm font-semibold text-kec-text">{item.caption || "No caption"}</p>
                   <p className="text-xs text-kec-secondary">Uploaded by {item.uploadedByName}</p>
-                  <p className="text-xs text-kec-muted">{new Date(item.uploadedAt).toLocaleString()}</p>
+                  <p className="text-xs text-kec-muted">{formatDateTime(item.uploadedAt)}</p>
                   {canManage(item) ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="secondary" onClick={() => startEdit(item)}>Edit</Button>
-                      <Button type="button" variant="danger" onClick={() => void remove(item.id)}>Delete</Button>
+                    <div className="grid gap-2 sm:flex sm:flex-wrap">
+                      <Button type="button" className="w-full sm:w-auto" variant="secondary" onClick={() => startEdit(item)}>Edit</Button>
+                      <Button type="button" className="w-full sm:w-auto" variant="danger" onClick={() => void remove(item.id)}>Delete</Button>
                     </div>
                   ) : null}
                 </>

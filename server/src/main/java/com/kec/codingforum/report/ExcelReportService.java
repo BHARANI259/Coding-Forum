@@ -20,11 +20,13 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class ExcelReportService {
+    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy hh:mm a");
 
     public byte[] eventStudents(EventReportData data) {
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -190,7 +192,7 @@ public class ExcelReportService {
     }
 
     private String format(LocalDateTime value) {
-        return value == null ? "" : value.toString().replace('T', ' ');
+        return value == null ? "" : value.format(DATE_TIME_FORMAT);
     }
 
     private String yesNo(boolean value) {

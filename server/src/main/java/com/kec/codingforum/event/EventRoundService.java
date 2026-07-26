@@ -16,7 +16,7 @@ import java.util.Set;
 @Service
 public class EventRoundService {
 
-    private static final Set<String> STATUSES = Set.of("NOT_STARTED", "ONGOING", "COMPLETED", "CANCELLED");
+    private static final Set<String> ADMIN_STATUSES = Set.of("ONGOING", "CANCELLED");
 
     private final EventRoundRepository rounds;
     private final EventRepository events;
@@ -54,14 +54,15 @@ public class EventRoundService {
     @Transactional
     public EventRoundDto create(Long eventId, CreateEventRoundRequest request) {
         Event event = findEvent(eventId);
+        assertStructureEditable(event);
         if (rounds.existsByEventIdAndRoundOrder(eventId, request.roundOrder())) {
             throw new IllegalArgumentException("Round order already exists for this event.");
         }
+        assertSingleFinal(eventId, null, request.finalRound());
         EventRound round = new EventRound();
         round.setEvent(event);
         apply(round, request.roundName(), request.roundOrder(), request.finalRound(), request.description(), request.scheduledAt());
         EventRound saved = rounds.save(round);
-        notifyRoundUpdated(event, saved);
         return toDto(saved);
     }
 
@@ -74,12 +75,13 @@ public class EventRoundService {
     @Transactional
     public EventRoundDto update(Long eventId, Long roundId, UpdateEventRoundRequest request) {
         EventRound round = findRound(eventId, roundId);
+        assertStructureEditable(round.getEvent());
         assertEditable(round);
         if (rounds.existsByEventIdAndRoundOrderAndIdNot(eventId, request.roundOrder(), roundId)) {
             throw new IllegalArgumentException("Round order already exists for this event.");
         }
+        assertSingleFinal(eventId, roundId, request.finalRound());
         apply(round, request.roundName(), request.roundOrder(), request.finalRound(), request.description(), request.scheduledAt());
-        notifyRoundUpdated(round.getEvent(), round);
         return toDto(round);
     }
 
@@ -93,21 +95,36 @@ public class EventRoundService {
     public EventRoundDto updateStatus(Long eventId, Long roundId, String status) {
         EventRound round = findRound(eventId, roundId);
         assertEditable(round);
-        round.setStatus(validStatus(status));
+        String normalized = validAdminStatus(status);
+        if ("ONGOING".equals(normalized)) {
+            startRound(round);
+        } else {
+            assertEventActive(round.getEvent());
+            round.setStatus("CANCELLED");
+        }
         round.setUpdatedAt(LocalDateTime.now());
-        notifyRoundUpdated(round.getEvent(), round);
+        notifyRoundStatusChanged(round.getEvent(), round);
         return toDto(round);
     }
 
     @Transactional
     public EventRoundDto facultyUpdateStatus(Long eventId, Long facultyId, Long roundId, String status) {
         requireAssigned(eventId, facultyId);
-        return updateStatus(eventId, roundId, status);
+        if (!"ONGOING".equalsIgnoreCase(status == null ? "" : status.trim())) {
+            throw new AccessDeniedException("Faculty can start a round; round completion happens when its result is published.");
+        }
+        EventRound round = findRound(eventId, roundId);
+        assertEditable(round);
+        startRound(round);
+        round.setUpdatedAt(LocalDateTime.now());
+        notifyRoundStatusChanged(round.getEvent(), round);
+        return toDto(round);
     }
 
     @Transactional
     public void delete(Long eventId, Long roundId) {
         EventRound round = findRound(eventId, roundId);
+        assertStructureEditable(round.getEvent());
         assertEditable(round);
         rounds.delete(round);
     }
@@ -145,13 +162,63 @@ public class EventRoundService {
         if (round.isResultPublished()) {
             throw new IllegalArgumentException("This round result has been published. Editing is disabled.");
         }
+        assertEventActive(round.getEvent());
     }
 
-    private void notifyRoundUpdated(Event event, EventRound round) {
+    private void assertStructureEditable(Event event) {
+        if (!"DRAFT".equals(event.getStatus()) || event.isResultsPublished()) {
+            throw new IllegalArgumentException("Round structure can be changed only while the event is in Draft.");
+        }
+    }
+
+    private void assertEventActive(Event event) {
+        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus()) || "CANCELLED".equals(event.getStatus())) {
+            throw new IllegalArgumentException("This event is closed. Round changes are disabled.");
+        }
+    }
+
+    private void assertSingleFinal(Long eventId, Long roundId, Boolean finalRound) {
+        if (!Boolean.TRUE.equals(finalRound)) {
+            return;
+        }
+        boolean anotherFinal = roundId == null
+                ? rounds.existsByEventIdAndFinalRoundTrue(eventId)
+                : rounds.existsByEventIdAndFinalRoundTrueAndIdNot(eventId, roundId);
+        if (anotherFinal) {
+            throw new IllegalArgumentException("An event can have only one final round.");
+        }
+    }
+
+    private void startRound(EventRound round) {
+        Event event = round.getEvent();
+        assertEventActive(event);
+        if ("ONGOING".equals(round.getStatus())) {
+            return;
+        }
+        if (!"NOT_STARTED".equals(round.getStatus())) {
+            throw new IllegalArgumentException("Only a round that has not started can be started.");
+        }
+        boolean previousRoundPending = rounds.findByEventIdOrderByRoundOrderAsc(event.getId()).stream()
+                .filter(item -> item.getRoundOrder() < round.getRoundOrder())
+                .anyMatch(item -> !item.isResultPublished());
+        if (previousRoundPending) {
+            throw new IllegalArgumentException("Publish the previous round result before starting this round.");
+        }
+        if (!Set.of("PUBLISHED", "ONGOING").contains(event.getStatus())) {
+            throw new IllegalArgumentException("Publish the event before starting its rounds.");
+        }
+        round.setStatus("ONGOING");
+        event.setStatus("ONGOING");
+        event.setRegistrationOpen(false);
+        event.setUpdatedAt(LocalDateTime.now());
+    }
+
+    private void notifyRoundStatusChanged(Event event, EventRound round) {
+        String action = "ONGOING".equals(round.getStatus()) ? "started" : "cancelled";
         notificationService.notifyUsers(
                 recipientResolver.combine(recipientResolver.getRegisteredStudentUserIds(event.getId()), recipientResolver.getAssignedFacultyUserIds(event.getId())),
-                "Round updated",
-                round.getRoundName() + " has been updated for " + event.getTitle() + ".",
+                "Round " + action,
+                round.getRoundName() + " has been " + action + " for " + event.getTitle() + ".",
                 "ROUND_UPDATED",
                 "ROUND",
                 round.getId()
@@ -162,10 +229,10 @@ public class EventRoundService {
         return new EventRoundDto(round.getId(), round.getEvent().getId(), round.getRoundName(), round.getRoundOrder(), round.getStatus(), round.isFinalRound(), round.getDescription(), round.getScheduledAt(), round.isResultPublished(), round.getResultPublishedAt());
     }
 
-    private String validStatus(String status) {
+    private String validAdminStatus(String status) {
         String normalized = status == null ? "" : status.trim().toUpperCase();
-        if (!STATUSES.contains(normalized)) {
-            throw new IllegalArgumentException("Invalid round status.");
+        if (!ADMIN_STATUSES.contains(normalized)) {
+            throw new IllegalArgumentException("Use Start Round or Cancel Round. A round is completed only by publishing its result.");
         }
         return normalized;
     }

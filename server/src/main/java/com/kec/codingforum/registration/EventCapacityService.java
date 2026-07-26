@@ -25,6 +25,9 @@ public class EventCapacityService {
         if (event.getRegistrationEnd() != null && now.isAfter(event.getRegistrationEnd())) {
             throw new IllegalArgumentException("Registration window has ended.");
         }
+        if (event.getEndDatetime() != null && now.isAfter(event.getEndDatetime())) {
+            throw new IllegalArgumentException("Event has ended. Registration is closed.");
+        }
     }
 
     public void assertIndividualCapacityAvailable(Event event) {
