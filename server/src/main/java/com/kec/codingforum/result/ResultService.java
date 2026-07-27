@@ -32,7 +32,7 @@ import java.util.Set;
 @Service
 public class ResultService {
 
-    private static final Set<String> RESULT_TYPES = Set.of("WINNER", "RUNNER_UP", "SECOND_RUNNER_UP", "PARTICIPANT", "DISQUALIFIED");
+    private static final Set<String> RESULT_TYPES = Set.of("WINNER", "RUNNER_UP", "SECOND_RUNNER_UP", "PARTICIPANT", "DISQUALIFIED", "NOT_PRESENTED");
 
     private final ResultRepository results;
     private final EventRepository events;
@@ -284,10 +284,10 @@ public class ResultService {
     }
 
     private void assertResultEditable(Event event) {
-        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus()) || "CANCELLED".equals(event.getStatus())) {
+        if (event.isResultsPublished() || "CANCELLED".equals(event.getStatus())) {
             throw new IllegalArgumentException("This event is closed. Result editing is disabled.");
         }
-        if (!Set.of("PUBLISHED", "ONGOING").contains(event.getStatus())) {
+        if (!Set.of("PUBLISHED", "ONGOING", "COMPLETED").contains(event.getStatus())) {
             throw new IllegalArgumentException("Publish the event before entering results.");
         }
     }

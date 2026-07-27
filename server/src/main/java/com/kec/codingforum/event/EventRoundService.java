@@ -172,7 +172,7 @@ public class EventRoundService {
     }
 
     private void assertEventActive(Event event) {
-        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus()) || "CANCELLED".equals(event.getStatus())) {
+        if (event.isResultsPublished() || "CANCELLED".equals(event.getStatus())) {
             throw new IllegalArgumentException("This event is closed. Round changes are disabled.");
         }
     }
@@ -204,11 +204,13 @@ public class EventRoundService {
         if (previousRoundPending) {
             throw new IllegalArgumentException("Publish the previous round result before starting this round.");
         }
-        if (!Set.of("PUBLISHED", "ONGOING").contains(event.getStatus())) {
+        if (!Set.of("PUBLISHED", "ONGOING", "COMPLETED").contains(event.getStatus()) || event.isResultsPublished()) {
             throw new IllegalArgumentException("Publish the event before starting its rounds.");
         }
         round.setStatus("ONGOING");
-        event.setStatus("ONGOING");
+        if (!"COMPLETED".equals(event.getStatus())) {
+            event.setStatus("ONGOING");
+        }
         event.setRegistrationOpen(false);
         event.setUpdatedAt(LocalDateTime.now());
     }

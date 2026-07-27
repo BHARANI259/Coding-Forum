@@ -22,6 +22,8 @@ import {
   getFacultyEventResults,
   getFacultyRoundResults,
   getFacultyRounds,
+  importAdminRoundMarks,
+  importFacultyRoundMarks,
   publishAdminFinalResult,
   publishAdminRoundResult,
   publishFacultyFinalResult,
@@ -37,7 +39,8 @@ import {
 } from "@/lib/api";
 import { formatDateTime } from "@/lib/dateFormat";
 
-const finalResultTypes = ["WINNER", "RUNNER_UP", "SECOND_RUNNER_UP", "PARTICIPANT", "DISQUALIFIED"];
+const finalResultTypes = ["WINNER", "RUNNER_UP", "SECOND_RUNNER_UP", "PARTICIPANT", "DISQUALIFIED", "NOT_PRESENTED"];
+const roundShortlistStatuses = ["QUALIFIED", "DISQUALIFIED", "NOT_PRESENTED"];
 
 type EventResultsManagerProps = {
   eventId: number;
@@ -55,6 +58,8 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(true);
+  const [marksFile, setMarksFile] = useState<File | null>(null);
+  const [importingMarks, setImportingMarks] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -80,7 +85,8 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
 
   const selectedRound = useMemo(() => rounds.find((round) => String(round.id) === selectedRoundId) ?? null, [rounds, selectedRoundId]);
   const eventClosed = Boolean(event && (event.resultsPublished || event.status === "COMPLETED" || event.status === "CANCELLED"));
-  const eventActive = Boolean(event && !eventClosed && (event.status === "PUBLISHED" || event.status === "ONGOING"));
+  const resultEntryOpen = Boolean(event && !event.resultsPublished && event.status !== "CANCELLED");
+  const eventActive = Boolean(event && resultEntryOpen && (event.status === "PUBLISHED" || event.status === "ONGOING" || event.status === "COMPLETED"));
   const selectedRoundOpen = Boolean(selectedRound && selectedRound.status === "ONGOING" && !selectedRound.resultPublished && eventActive);
   const roundLocked = !selectedRoundOpen;
   const finalLocked = !selectedRoundOpen;
@@ -185,24 +191,24 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
     }
   }
 
-  async function saveIndividualDisqualification(studentId: number, disqualified: boolean) {
+  async function saveIndividualRoundStatus(studentId: number) {
     if (!selectedRound) {
       setError("Create or choose a round first.");
       return;
     }
+    const status = selected[`student-round-${studentId}`] ?? roundResultsByStudent.get(studentId)?.status ?? "QUALIFIED";
     setError("");
     setSuccess("");
     try {
-      const status = disqualified ? "DISQUALIFIED" : "QUALIFIED";
       if (mode === "admin") {
         await declareAdminRoundStudentResult(eventId, selectedRound.id, studentId, status);
       } else {
         await declareFacultyRoundStudentResult(eventId, selectedRound.id, studentId, status);
       }
-      setSuccess("Round disqualification draft saved.");
+      setSuccess("Round status draft saved.");
       await refreshResults();
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Unable to save disqualification.");
+      setError(exception instanceof Error ? exception.message : "Unable to save round status.");
     }
   }
 
@@ -235,7 +241,7 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
     }
   }
 
-  async function saveTeamDisqualification(teamId: number, teamCode: string, disqualified: boolean) {
+  async function saveTeamRoundStatus(teamId: number, teamCode: string) {
     if (!selectedRound) {
       setError("Create or choose a round first.");
       return;
@@ -244,19 +250,43 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
       setError("Team result can be saved after the team appears in admin data.");
       return;
     }
+    const status = selected[`team-round-${teamCode}`] ?? roundResultsByTeam.get(teamId)?.status ?? "QUALIFIED";
     setError("");
     setSuccess("");
     try {
-      const status = disqualified ? "DISQUALIFIED" : "QUALIFIED";
       if (mode === "admin") {
         await declareAdminRoundTeamResult(eventId, selectedRound.id, teamId, status);
       } else {
         await declareFacultyRoundTeamResult(eventId, selectedRound.id, teamId, status);
       }
-      setSuccess(`Round disqualification draft saved for ${teamCode}.`);
+      setSuccess(`Round status draft saved for ${teamCode}.`);
       await refreshResults();
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Unable to save disqualification.");
+      setError(exception instanceof Error ? exception.message : "Unable to save round status.");
+    }
+  }
+
+  async function importMarks() {
+    if (!selectedRound || !marksFile) {
+      setError("Choose the final round and an Excel file first.");
+      return;
+    }
+    setImportingMarks(true);
+    setError("");
+    setSuccess("");
+    try {
+      if (mode === "admin") {
+        await importAdminRoundMarks(eventId, selectedRound.id, marksFile);
+      } else {
+        await importFacultyRoundMarks(eventId, selectedRound.id, marksFile);
+      }
+      setSuccess("Marks imported and draft final results assigned.");
+      setMarksFile(null);
+      await refreshResults();
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Unable to import marks.");
+    } finally {
+      setImportingMarks(false);
     }
   }
 
@@ -328,9 +358,14 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
       <Card>
         <h2 className="text-lg font-bold text-kec-text">{event.title}</h2>
         <p className="mt-1 text-sm text-kec-secondary">{event.category?.name ?? "Uncategorized"} - {formatLabel(event.eventType)}</p>
-        {eventClosed ? (
+        {eventClosed && event.resultsPublished ? (
           <p className="mt-4 rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700">
             This event is {event.status.toLowerCase()}. Existing results are available for reference, but editing and publishing are disabled.
+          </p>
+        ) : null}
+        {event?.status === "COMPLETED" && !event.resultsPublished ? (
+          <p className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            The event time has ended, but final results are not published yet. Result entry remains open until final publish.
           </p>
         ) : null}
         <div className="mt-5">
@@ -373,20 +408,30 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
           {!selectedRound ? "Choose a round to review its participants and result status."
             : selectedRound.status === "NOT_STARTED" ? "Start this round before changing participant results."
               : selectedRound.finalRound ? "Choose each final position, save the drafts, then publish the final result."
-                : "Use the Disqualified switch for each participant or team, then publish this round result."}
+                : "Choose Qualified, Disqualified, or Not Presented for each participant or team, then publish this round result."}
         </p>
         {selectedRound?.resultPublished ? (
           <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
             {selectedRound.finalRound ? "Final results have been published. Event is completed. Editing is disabled." : "This round result has been published. Editing is disabled."}
           </p>
         ) : null}
+        {selectedRound?.finalRound && isMarksImportEvent(event) && selectedRoundOpen ? (
+          <div className="mt-4 rounded-xl border border-kec-border bg-slate-50 p-4">
+            <h3 className="text-sm font-bold text-kec-text">Import Marks Excel</h3>
+            <p className="mt-1 text-sm text-kec-secondary">For coding contest and placement drill events. Columns: Register Number or Team Code, Marks, optional Status.</p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input type="file" accept=".xlsx,.xls" onChange={(event) => setMarksFile(event.target.files?.[0] ?? null)} />
+              <Button type="button" disabled={!marksFile} loading={importingMarks} onClick={() => void importMarks()}>Import Marks</Button>
+            </div>
+          </div>
+        ) : null}
       </Card>
 
       {event.eventType === "INDIVIDUAL" ? (
         <DataTable
           headers={selectedRound?.finalRound
-            ? ["Student", "Register No", "Department", "Round Status", "Final Result", "Points", "Set Final Result", "Action"]
-            : ["Student", "Register No", "Department", "Round Status", "Disqualified", "Action"]}
+            ? ["Student", "Register No", "Department", "Round Status", "Marks", "Final Result", "Points", "Set Final Result", "Action"]
+            : ["Student", "Register No", "Department", "Round Status", "Set Round Status", "Action"]}
           rows={registrations.filter((item) => item.status === "REGISTERED").map((registration) => {
             const result = resultsByStudent.get(registration.studentId);
             const roundResult = roundResultsByStudent.get(registration.studentId);
@@ -395,6 +440,7 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
               registration.registerNumber,
               registration.departmentCode ?? "-",
               roundResult?.status ? formatLabel(roundResult.status) : "-",
+              roundResult?.marks ?? "-",
               result ? <ResultBadge key="badge" resultType={result.resultType} /> : "-",
               result?.pointsAwarded ?? "-",
               <Select key="select" label="Final Result" disabled={finalLocked} value={selected[`student-${registration.studentId}`] ?? roundResult?.status ?? ""} onChange={(event) => setSelected({ ...selected, [`student-${registration.studentId}`]: event.target.value })}>
@@ -410,8 +456,10 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
               registration.registerNumber,
               registration.departmentCode ?? "-",
               formatLabel(roundResult?.status ?? "QUALIFIED"),
-              <input key="switch" type="checkbox" disabled={roundLocked} checked={roundResult?.status === "DISQUALIFIED"} onChange={(event) => void saveIndividualDisqualification(registration.studentId, event.target.checked)} />,
-              roundLocked ? "Locked" : "Toggle to save"
+              <Select key="round-status" label="Round Status" disabled={roundLocked} value={selected[`student-round-${registration.studentId}`] ?? roundResult?.status ?? "QUALIFIED"} onChange={(event) => setSelected({ ...selected, [`student-round-${registration.studentId}`]: event.target.value })}>
+                {roundShortlistStatuses.map((status) => <option key={status} value={status}>{formatLabel(status)}</option>)}
+              </Select>,
+              <Button key="save" type="button" disabled={roundLocked} onClick={() => void saveIndividualRoundStatus(registration.studentId)}>Save</Button>
             ];
           })}
           emptyMessage="No registered students found."
@@ -419,8 +467,8 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
       ) : (
         <DataTable
           headers={selectedRound?.finalRound
-            ? ["Team", "Members", "Round Status", "Final Result", "Points", "Set Final Result", "Action"]
-            : ["Team", "Members", "Round Status", "Disqualified", "Action"]}
+            ? ["Team", "Members", "Round Status", "Marks", "Final Result", "Points", "Set Final Result", "Action"]
+            : ["Team", "Members", "Round Status", "Set Round Status", "Action"]}
           rows={teamRows.map((team) => {
             const result = summary?.results.find((item) => item.teamCode === team.teamCode);
             const roundResult = roundResultsByTeam.get(team.teamId);
@@ -428,6 +476,7 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
               `${team.teamName} (${team.teamCode})`,
               team.members.join(", "),
               roundResult?.status ? formatLabel(roundResult.status) : "-",
+              roundResult?.marks ?? "-",
               result ? <ResultBadge key="badge" resultType={result.resultType} /> : "-",
               result?.pointsAwarded ?? "-",
               <Select key="select" label="Final Result" disabled={finalLocked} value={selected[`team-${team.teamCode}`] ?? roundResult?.status ?? ""} onChange={(event) => setSelected({ ...selected, [`team-${team.teamCode}`]: event.target.value })}>
@@ -442,8 +491,10 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
               `${team.teamName} (${team.teamCode})`,
               team.members.join(", "),
               formatLabel(roundResult?.status ?? "QUALIFIED"),
-              <input key="switch" type="checkbox" disabled={roundLocked} checked={roundResult?.status === "DISQUALIFIED"} onChange={(event) => void saveTeamDisqualification(team.teamId, team.teamCode, event.target.checked)} />,
-              roundLocked ? "Locked" : "Toggle to save"
+              <Select key="round-status" label="Round Status" disabled={roundLocked} value={selected[`team-round-${team.teamCode}`] ?? roundResult?.status ?? "QUALIFIED"} onChange={(event) => setSelected({ ...selected, [`team-round-${team.teamCode}`]: event.target.value })}>
+                {roundShortlistStatuses.map((status) => <option key={status} value={status}>{formatLabel(status)}</option>)}
+              </Select>,
+              <Button key="save" type="button" disabled={roundLocked} onClick={() => void saveTeamRoundStatus(team.teamId, team.teamCode)}>Save</Button>
             ];
           })}
           emptyMessage="No registered teams found."
@@ -469,4 +520,9 @@ function formatRoundStatus(value: string) {
 
 function formatLabel(value: string) {
   return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isMarksImportEvent(event: EventDetail) {
+  const categoryName = event.category?.name?.toLowerCase() ?? "";
+  return categoryName.includes("coding") || categoryName.includes("contest") || categoryName.includes("placement") || categoryName.includes("drill");
 }

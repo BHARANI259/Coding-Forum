@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -46,6 +47,9 @@ public class EventRoundResult {
 
     @Column(nullable = false)
     private String status;
+
+    @Column(name = "marks")
+    private BigDecimal marks;
 
     @ManyToOne
     @JoinColumn(name = "declared_by")

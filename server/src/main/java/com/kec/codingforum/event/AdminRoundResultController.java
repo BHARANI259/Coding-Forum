@@ -11,7 +11,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 
@@ -39,5 +42,10 @@ public class AdminRoundResultController {
     @PostMapping("/individual")
     public RoundResultDto individual(@PathVariable Long eventId, @PathVariable Long roundId, @Valid @RequestBody DeclareRoundStudentResultRequest request) {
         return service.saveStudent(eventId, roundId, request.studentId(), request.status(), SecurityUtils.getCurrentUserId());
+    }
+
+    @PostMapping(value = "/import-marks", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public List<RoundResultDto> importMarks(@PathVariable Long eventId, @PathVariable Long roundId, @RequestPart("file") MultipartFile file) {
+        return service.importMarks(eventId, roundId, file, SecurityUtils.getCurrentUserId());
     }
 }

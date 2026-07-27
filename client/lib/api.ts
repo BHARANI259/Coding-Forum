@@ -294,6 +294,7 @@ export type RoundResult = {
   studentName: string | null;
   registerNumber: string | null;
   status: string;
+  marks: number | null;
   declaredByUserId: number | null;
   declaredAt: string;
 };
@@ -1082,6 +1083,15 @@ export function publishAdminFinalResult(eventId: number, roundId: number) {
   return apiFetch<void>(`/admin/events/${eventId}/rounds/${roundId}/publish-final-result`, { method: "POST" });
 }
 
+export function importAdminRoundMarks(eventId: number, roundId: number, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch<RoundResult[]>(`/admin/events/${eventId}/rounds/${roundId}/results/import-marks`, {
+    method: "POST",
+    body: formData
+  });
+}
+
 export function getFacultyRoundResults(eventId: number, roundId: number) {
   return apiFetch<RoundResult[]>(`/faculty/events/${eventId}/rounds/${roundId}/results`);
 }
@@ -1106,6 +1116,15 @@ export function publishFacultyRoundResult(eventId: number, roundId: number) {
 
 export function publishFacultyFinalResult(eventId: number, roundId: number) {
   return apiFetch<void>(`/faculty/events/${eventId}/rounds/${roundId}/publish-final-result`, { method: "POST" });
+}
+
+export function importFacultyRoundMarks(eventId: number, roundId: number, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch<RoundResult[]>(`/faculty/events/${eventId}/rounds/${roundId}/results/import-marks`, {
+    method: "POST",
+    body: formData
+  });
 }
 
 export function createTeam(eventId: number, payload: { teamName: string }) {

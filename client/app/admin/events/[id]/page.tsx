@@ -293,6 +293,7 @@ export default function AdminEventDetailPage() {
   const eventClosed = Boolean(event && (event.resultsPublished || event.status === "COMPLETED" || event.status === "CANCELLED"));
   const eventActive = Boolean(event && !eventClosed && (event.status === "PUBLISHED" || event.status === "ONGOING"));
   const setupEditable = event?.status === "DRAFT" && !eventClosed;
+  const finalRoundAssigned = rounds.some((round) => round.finalRound);
 
   return (
     <AppShell expectedRole="SUPER_ADMIN" title="Event Detail">
@@ -469,7 +470,7 @@ export default function AdminEventDetailPage() {
               <p className="mt-1 text-sm text-kec-secondary">Configure the round order and publish each result separately.</p>
             </div>
 
-            {setupEditable ? (
+            {setupEditable && !finalRoundAssigned ? (
               <form className="mt-4 rounded-xl border border-kec-border p-4" onSubmit={handleCreateRound}>
                 <div>
                   <h3 className="text-sm font-bold text-kec-text">Add New Round</h3>
@@ -508,6 +509,11 @@ export default function AdminEventDetailPage() {
                   <Button type="submit">Save Round</Button>
                 </div>
               </form>
+            ) : finalRoundAssigned ? (
+              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <h3 className="text-sm font-bold text-amber-900">Final round assigned</h3>
+                <p className="mt-1 text-sm text-amber-800">Round creation is closed because this event already has a final round.</p>
+              </div>
             ) : (
               <div className="mt-4 rounded-lg border border-kec-border bg-slate-50 p-3">
                 <h3 className="text-sm font-bold text-kec-text">Round Structure Locked</h3>

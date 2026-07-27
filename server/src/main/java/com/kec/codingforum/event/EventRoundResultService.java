@@ -13,17 +13,29 @@ import com.kec.codingforum.user.UserRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Service
 public class EventRoundResultService {
 
-    private static final Set<String> NON_FINAL_STATUSES = Set.of("SELECTED", "DISQUALIFIED");
-    private static final Set<String> FINAL_STATUSES = Set.of("WINNER", "RUNNER_UP", "SECOND_RUNNER_UP", "PARTICIPANT", "DISQUALIFIED");
+    private static final Set<String> NON_FINAL_STATUSES = Set.of("SELECTED", "QUALIFIED", "DISQUALIFIED", "NOT_PRESENTED");
+    private static final Set<String> FINAL_STATUSES = Set.of("WINNER", "RUNNER_UP", "SECOND_RUNNER_UP", "PARTICIPANT", "DISQUALIFIED", "NOT_PRESENTED");
 
     private final EventRoundResultRepository roundResults;
     private final EventRoundRepository rounds;
@@ -168,6 +180,46 @@ public class EventRoundResultService {
         resultService.publishResults(eventId);
     }
 
+    @Transactional
+    public List<RoundResultDto> importMarks(Long eventId, Long roundId, MultipartFile file, Long declaredByUserId) {
+        EventRound round = findRound(eventId, roundId);
+        Event event = round.getEvent();
+        assertRoundEditable(round);
+        if (!round.isFinalRound()) {
+            throw new IllegalArgumentException("Marks import is available only for the final round.");
+        }
+        if (!isMarksImportCategory(event)) {
+            throw new IllegalArgumentException("Marks import is available only for coding contest or placement drill events.");
+        }
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Choose an Excel file to import marks.");
+        }
+        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
+        if (!name.endsWith(".xlsx") && !name.endsWith(".xls")) {
+            throw new IllegalArgumentException("Upload an Excel file with .xlsx or .xls extension.");
+        }
+        User declaredBy = users.findById(declaredByUserId).orElseThrow(() -> new IllegalArgumentException("Declaring user not found."));
+        List<ImportedMarkRow> importedRows = readMarkRows(file);
+        if (importedRows.isEmpty()) {
+            throw new IllegalArgumentException("No valid marks found in the Excel file.");
+        }
+        List<EventRoundResult> savedRows = new ArrayList<>();
+        for (ImportedMarkRow row : importedRows) {
+            EventRoundResult result = resolveImportTarget(event, round, row);
+            result.setStatus(row.status() == null ? "PARTICIPANT" : validStatus(round, row.status()));
+            result.setMarks(row.marks());
+            result.setDeclaredBy(declaredBy);
+            result.setDeclaredAt(LocalDateTime.now());
+            savedRows.add(roundResults.save(result));
+        }
+        List<EventRoundResult> allRoundRows = roundResults.findByEventIdAndRoundIdOrderByDeclaredAtDesc(eventId, roundId);
+        assignRanksFromMarks(allRoundRows);
+        return allRoundRows.stream()
+                .sorted(Comparator.comparing((EventRoundResult item) -> item.getMarks() == null ? BigDecimal.valueOf(-1) : item.getMarks()).reversed())
+                .map(this::toDto)
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public RoundResultDto getStudentRoundResult(Long eventId, Long roundId, Long studentId) {
         EventRound round = findRound(eventId, roundId);
@@ -197,13 +249,10 @@ public class EventRoundResultService {
         if (!round.isFinalRound() && "SELECTED".equals(normalized)) {
             normalized = "QUALIFIED";
         }
-        if (!round.isFinalRound()) {
-            allowed = Set.of("QUALIFIED", "DISQUALIFIED");
-        }
         if (!allowed.contains(normalized)) {
             throw new IllegalArgumentException(round.isFinalRound()
-                    ? "Final round status must be WINNER, RUNNER_UP, SECOND_RUNNER_UP, PARTICIPANT, or DISQUALIFIED."
-                    : "Non-final round status must be QUALIFIED or DISQUALIFIED.");
+                    ? "Final round status must be WINNER, RUNNER_UP, SECOND_RUNNER_UP, PARTICIPANT, DISQUALIFIED, or NOT_PRESENTED."
+                    : "Non-final round status must be QUALIFIED, DISQUALIFIED, or NOT_PRESENTED.");
         }
         return normalized;
     }
@@ -213,10 +262,10 @@ public class EventRoundResultService {
             throw new IllegalArgumentException("This round result has been published. Editing is disabled.");
         }
         Event event = round.getEvent();
-        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus()) || "CANCELLED".equals(event.getStatus())) {
+        if (event.isResultsPublished() || "CANCELLED".equals(event.getStatus())) {
             throw new IllegalArgumentException("This event is closed. Result editing is disabled.");
         }
-        if (!Set.of("PUBLISHED", "ONGOING").contains(event.getStatus())) {
+        if (!Set.of("PUBLISHED", "ONGOING", "COMPLETED").contains(event.getStatus())) {
             throw new IllegalArgumentException("Publish the event before entering round results.");
         }
     }
@@ -233,7 +282,7 @@ public class EventRoundResultService {
             result.setRound(round);
             result.setTeam(team);
             result.setStudent(null);
-            result.setStatus("DISQUALIFIED".equals(result.getStatus()) ? "DISQUALIFIED" : "QUALIFIED");
+            result.setStatus(Set.of("DISQUALIFIED", "NOT_PRESENTED").contains(result.getStatus()) ? result.getStatus() : "QUALIFIED");
             result.setDeclaredBy(user);
             result.setDeclaredAt(LocalDateTime.now());
             roundResults.save(result);
@@ -253,7 +302,7 @@ public class EventRoundResultService {
             result.setRound(round);
             result.setTeam(null);
             result.setStudent(student);
-            result.setStatus("DISQUALIFIED".equals(result.getStatus()) ? "DISQUALIFIED" : "QUALIFIED");
+            result.setStatus(Set.of("DISQUALIFIED", "NOT_PRESENTED").contains(result.getStatus()) ? result.getStatus() : "QUALIFIED");
             result.setDeclaredBy(user);
             result.setDeclaredAt(LocalDateTime.now());
             roundResults.save(result);
@@ -348,8 +397,115 @@ public class EventRoundResultService {
                 student == null ? null : student.getName(),
                 student == null ? null : student.getRegisterNumber(),
                 result.getStatus(),
+                result.getMarks(),
                 result.getDeclaredBy() == null ? null : result.getDeclaredBy().getId(),
                 result.getDeclaredAt()
         );
+    }
+
+    private boolean isMarksImportCategory(Event event) {
+        String category = event.getCategory() == null ? "" : event.getCategory().getName().toLowerCase(Locale.ROOT);
+        return category.contains("coding") || category.contains("contest") || category.contains("placement") || category.contains("drill");
+    }
+
+    private List<ImportedMarkRow> readMarkRows(MultipartFile file) {
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            DataFormatter formatter = new DataFormatter();
+            Map<String, Integer> headers = headers(sheet.getRow(0), formatter);
+            Integer identifierIndex = firstPresent(headers, "registernumber", "register number", "register_no", "regno", "teamcode", "team code");
+            Integer marksIndex = firstPresent(headers, "marks", "score", "points");
+            Integer statusIndex = firstPresent(headers, "status", "result");
+            if (identifierIndex == null || marksIndex == null) {
+                throw new IllegalArgumentException("Excel must include Register Number or Team Code and Marks columns.");
+            }
+            List<ImportedMarkRow> rows = new ArrayList<>();
+            for (int index = 1; index <= sheet.getLastRowNum(); index++) {
+                Row row = sheet.getRow(index);
+                if (row == null) {
+                    continue;
+                }
+                String identifier = formatter.formatCellValue(row.getCell(identifierIndex)).trim();
+                String marksText = formatter.formatCellValue(row.getCell(marksIndex)).trim();
+                if (identifier.isBlank() || marksText.isBlank()) {
+                    continue;
+                }
+                String status = statusIndex == null ? null : formatter.formatCellValue(row.getCell(statusIndex)).trim();
+                rows.add(new ImportedMarkRow(identifier, new BigDecimal(marksText), status.isBlank() ? null : status));
+            }
+            return rows;
+        } catch (IOException exception) {
+            throw new IllegalArgumentException("Unable to read the Excel file.");
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("Marks column must contain numbers only.");
+        }
+    }
+
+    private Map<String, Integer> headers(Row headerRow, DataFormatter formatter) {
+        if (headerRow == null) {
+            throw new IllegalArgumentException("Excel must include a header row.");
+        }
+        Map<String, Integer> headers = new HashMap<>();
+        for (int index = 0; index < headerRow.getLastCellNum(); index++) {
+            String value = formatter.formatCellValue(headerRow.getCell(index)).trim().toLowerCase(Locale.ROOT);
+            if (!value.isBlank()) {
+                headers.put(value.replaceAll("[^a-z0-9]", ""), index);
+                headers.put(value, index);
+            }
+        }
+        return headers;
+    }
+
+    private Integer firstPresent(Map<String, Integer> headers, String... names) {
+        for (String name : names) {
+            Integer index = headers.get(name.replaceAll("[^a-z0-9]", "").toLowerCase(Locale.ROOT));
+            if (index != null) {
+                return index;
+            }
+        }
+        return null;
+    }
+
+    private EventRoundResult resolveImportTarget(Event event, EventRound round, ImportedMarkRow row) {
+        EventRoundResult result;
+        if ("TEAM".equals(event.getEventType())) {
+            Team team = teams.findByTeamCodeIgnoreCase(row.identifier()).orElseThrow(() -> new IllegalArgumentException("Team code not found: " + row.identifier()));
+            if (!team.getEvent().getId().equals(event.getId())) {
+                throw new IllegalArgumentException("Team code does not belong to this event: " + row.identifier());
+            }
+            result = roundResults.findByRoundIdAndTeamId(round.getId(), team.getId()).orElseGet(EventRoundResult::new);
+            result.setTeam(team);
+            result.setStudent(null);
+        } else {
+            Student student = students.findByRegisterNumberIgnoreCase(row.identifier()).orElseThrow(() -> new IllegalArgumentException("Register number not found: " + row.identifier()));
+            if (!registrations.existsByEventIdAndStudentIdAndStatus(event.getId(), student.getId(), "REGISTERED")) {
+                throw new IllegalArgumentException("Student is not registered for this event: " + row.identifier());
+            }
+            result = roundResults.findByRoundIdAndStudentId(round.getId(), student.getId()).orElseGet(EventRoundResult::new);
+            result.setStudent(student);
+            result.setTeam(null);
+        }
+        result.setEvent(event);
+        result.setRound(round);
+        return result;
+    }
+
+    private void assignRanksFromMarks(List<EventRoundResult> rows) {
+        List<EventRoundResult> presentRows = rows.stream()
+                .filter(row -> !"NOT_PRESENTED".equals(row.getStatus()) && !"DISQUALIFIED".equals(row.getStatus()))
+                .sorted(Comparator.comparing(EventRoundResult::getMarks, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+        for (int index = 0; index < presentRows.size(); index++) {
+            EventRoundResult row = presentRows.get(index);
+            row.setStatus(switch (index) {
+                case 0 -> "WINNER";
+                case 1 -> "RUNNER_UP";
+                case 2 -> "SECOND_RUNNER_UP";
+                default -> "PARTICIPANT";
+            });
+        }
+    }
+
+    private record ImportedMarkRow(String identifier, BigDecimal marks, String status) {
     }
 }

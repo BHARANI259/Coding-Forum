@@ -330,6 +330,7 @@ function formatRoundStatus(value: string) {
 
 function formatStudentProgress(result: RoundResult | null, finalRound: boolean) {
   if (!result) return "No progression recorded for you in this round.";
+  if (result.status === "NOT_PRESENTED") return "Marked not presented for this round";
   if (result.status === "DISQUALIFIED") return "Disqualified in this round";
   if (!finalRound && result.status === "QUALIFIED") return "Qualified for the next round";
   return result.status.replaceAll("_", " ").toLowerCase().replace(/^./, (value) => value.toUpperCase());

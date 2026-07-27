@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import EventPosterUpload from "@/components/events/EventPosterUpload";
 import {
   createEvent,
+  createAdminRound,
   createProblemStatement,
   getDepartments,
   getEventCategories,
@@ -19,7 +20,8 @@ import {
   type EventPayload,
   type EventCategory,
   type Faculty,
-  type ProblemStatementLink
+  type ProblemStatementLink,
+  type RoundPayload
 } from "@/lib/api";
 import { removeEventPoster, uploadEventPoster } from "@/lib/api/adminEventPosters";
 
@@ -59,6 +61,14 @@ type ProblemDraft = {
   links: ProblemStatementLink[];
 };
 
+type RoundDraft = {
+  roundName: string;
+  roundOrder: string;
+  finalRound: boolean;
+  description: string;
+  scheduledAt: string;
+};
+
 const initialState: FormState = {
   title: "",
   description: "",
@@ -91,9 +101,11 @@ export default function EventForm({ mode, event }: EventFormProps) {
   const [form, setForm] = useState<FormState>(() => event ? fromEvent(event) : initialState);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [problemDrafts, setProblemDrafts] = useState<ProblemDraft[]>([]);
+  const [roundDrafts, setRoundDrafts] = useState<RoundDraft[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [removingPoster, setRemovingPoster] = useState(false);
+  const finalRoundAssigned = cleanRoundDrafts(roundDrafts).some((round) => round.finalRound);
 
   useEffect(() => {
     async function loadOptions() {
@@ -118,20 +130,18 @@ export default function EventForm({ mode, event }: EventFormProps) {
     setSaving(true);
     setError("");
     try {
-      const incompleteProblem = problemDrafts.find((item) => item.title.trim() || item.description.trim() || item.links.some((link) => link.url.trim() || (link.label ?? "").trim()));
-      if (incompleteProblem && (!incompleteProblem.title.trim() || !incompleteProblem.description.trim())) {
-        throw new Error("Every problem statement needs both a title and a description. Complete it or remove the draft before saving.");
-      }
+      validateProblemDrafts(problemDrafts);
       const incompleteLink = problemDrafts.some((item) => item.links.some((link) => (link.label ?? "").trim() && !link.url.trim()));
       if (incompleteLink) {
         throw new Error("Every reference link with a label needs a URL. Complete it or remove the link row before saving.");
       }
+      validateRoundDrafts(roundDrafts);
       const payload = toPayload(form);
       const saved = mode === "create" ? await createEvent(payload) : await updateEvent(event?.id ?? 0, payload);
       if (posterFile) {
         await uploadEventPoster(saved.id, posterFile);
       }
-      for (const draft of problemDrafts.filter((item) => item.title.trim() && item.description.trim())) {
+      for (const draft of cleanProblemDrafts(problemDrafts)) {
         const links = draft.links
           .map((link, index) => ({
             id: null,
@@ -141,12 +151,22 @@ export default function EventForm({ mode, event }: EventFormProps) {
           }))
           .filter((link) => link.url);
         await createProblemStatement(saved.id, {
-          title: draft.title,
-          description: draft.description,
+          title: draft.title.trim(),
+          description: draft.description.trim(),
           active: draft.active,
           referenceLink: links[0]?.url ?? "",
           links
         });
+      }
+      for (const draft of cleanRoundDrafts(roundDrafts)) {
+        const roundPayload: RoundPayload = {
+          roundName: draft.roundName.trim(),
+          roundOrder: Number(draft.roundOrder),
+          finalRound: draft.finalRound,
+          description: draft.description.trim(),
+          scheduledAt: toIso(draft.scheduledAt)
+        };
+        await createAdminRound(saved.id, roundPayload);
       }
       router.push(`/admin/events/${saved.id}`);
     } catch (exception) {
@@ -215,6 +235,35 @@ export default function EventForm({ mode, event }: EventFormProps) {
     setProblemDrafts((current) => current.map((item, itemIndex) => itemIndex === problemIndex
       ? { ...item, links: item.links.filter((_, index) => index !== linkIndex) }
       : item));
+  }
+
+  function addRoundDraft() {
+    if (finalRoundAssigned) {
+      return;
+    }
+    setRoundDrafts((current) => [
+      ...current,
+      {
+        roundName: "",
+        roundOrder: String(nextRoundOrder(current)),
+        finalRound: current.length === 0,
+        description: "",
+        scheduledAt: ""
+      }
+    ]);
+  }
+
+  function updateRoundDraft(index: number, patch: Partial<RoundDraft>) {
+    setRoundDrafts((current) => current.map((item, itemIndex) => {
+      if (patch.finalRound === true && itemIndex !== index) {
+        return { ...item, finalRound: false };
+      }
+      return itemIndex === index ? { ...item, ...patch } : item;
+    }));
+  }
+
+  function removeRoundDraft(index: number) {
+    setRoundDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index));
   }
 
   return (
@@ -314,6 +363,65 @@ export default function EventForm({ mode, event }: EventFormProps) {
       </Card>
       </details>
 
+      <details className="rounded-xl border border-kec-border bg-white p-3 shadow-sm sm:p-4" open={mode === "create"}>
+        <summary className="cursor-pointer text-base font-bold text-kec-text">Event Rounds</summary>
+        <p className="mt-1 text-sm text-kec-secondary">Add the round structure while creating the event. You can still manage rounds from Event Detail after saving.</p>
+        <Card className="mt-4 border-0 p-0 shadow-none">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-kec-text">Rounds</h2>
+              <p className="mt-1 text-sm text-kec-secondary">Configure round names, order, and the final round.</p>
+            </div>
+            {!finalRoundAssigned ? (
+              <Button type="button" variant="secondary" onClick={addRoundDraft}>Add Round</Button>
+            ) : null}
+          </div>
+          {finalRoundAssigned ? (
+            <p className="mt-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+              Final round assigned. The round list is closed for new additions. Remove or unmark the final round to add more rounds.
+            </p>
+          ) : null}
+          <div className="mt-4 space-y-3">
+            {roundDrafts.map((draft, roundIndex) => (
+              <div key={roundIndex} className="rounded-xl border border-kec-border p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-sm font-bold text-kec-text">Round {roundIndex + 1}</h3>
+                  <Button type="button" variant="ghost" onClick={() => removeRoundDraft(roundIndex)}>Remove</Button>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-[2fr_0.8fr_1fr]">
+                  <Input label="Round Name" placeholder="e.g. Prelims" value={draft.roundName} onChange={(event) => updateRoundDraft(roundIndex, { roundName: event.target.value })} />
+                  <Input label="Order" type="number" min={1} value={draft.roundOrder} onChange={(event) => updateRoundDraft(roundIndex, { roundOrder: event.target.value })} />
+                  <label className="flex items-end gap-2 pb-3 text-sm font-semibold text-kec-text">
+                    <input
+                      type="checkbox"
+                      checked={draft.finalRound}
+                      onChange={(event) => updateRoundDraft(roundIndex, { finalRound: event.target.checked })}
+                    />
+                    Final round
+                  </label>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <Input label="Scheduled At" type="datetime-local" value={draft.scheduledAt} onChange={(event) => updateRoundDraft(roundIndex, { scheduledAt: event.target.value })} />
+                  <label className="block">
+                    <span className="text-sm font-semibold text-kec-text">Description</span>
+                    <textarea
+                      className="mt-2 min-h-11 w-full rounded-lg border border-kec-border px-3 py-2 text-base outline-none focus:border-kec-purple focus:ring-4 focus:ring-kec-purple/15 sm:text-sm"
+                      value={draft.description}
+                      onChange={(event) => updateRoundDraft(roundIndex, { description: event.target.value })}
+                    />
+                  </label>
+                </div>
+              </div>
+            ))}
+            {!roundDrafts.length ? (
+              <p className="rounded-lg border border-dashed border-kec-border bg-slate-50 px-3 py-4 text-sm text-kec-secondary">
+                No rounds added yet. Add rounds now, or configure them from the event detail page after creating the event.
+              </p>
+            ) : null}
+          </div>
+        </Card>
+      </details>
+
       <Card>
         <h2 className="text-base font-bold text-kec-text">Date & Registration</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -367,6 +475,7 @@ export default function EventForm({ mode, event }: EventFormProps) {
           <ReviewItem label="Event Type" value={form.eventType === "TEAM" ? "Team event" : "Individual event"} />
           <ReviewItem label="Departments" value={form.allowedDepartmentIds.length ? `${form.allowedDepartmentIds.length} selected` : "All departments"} />
           <ReviewItem label="Incharges" value={form.inchargeFacultyIds.length ? `${form.inchargeFacultyIds.length} selected` : "Assign after saving"} />
+          <ReviewItem label="Rounds" value={roundDrafts.length ? `${roundDrafts.length} draft round${roundDrafts.length === 1 ? "" : "s"}` : "Add after saving"} />
           <ReviewItem label="Initial State" value={mode === "create" ? "Draft, registration closed" : formatFormStatus(form.status)} />
         </div>
       </Card>
@@ -460,6 +569,74 @@ function toPayload(form: FormState): EventPayload {
     allowedTechnicalAreas: form.allowedTechnicalAreas,
     inchargeFacultyIds: form.inchargeFacultyIds
   };
+}
+
+function cleanProblemDrafts(problemDrafts: ProblemDraft[]) {
+  return problemDrafts.filter((item) => item.title.trim() && item.description.trim());
+}
+
+function validateProblemDrafts(problemDrafts: ProblemDraft[]) {
+  for (const draft of problemDrafts) {
+    if (!draft.title.trim() || !draft.description.trim()) {
+      throw new Error("Every added problem statement needs both a title and a description. Complete it or remove the draft before saving.");
+    }
+    for (const link of draft.links) {
+      if ((link.label ?? "").trim() && !link.url.trim()) {
+        throw new Error("Every reference link with a label needs a URL. Complete it or remove the link row before saving.");
+      }
+      if (link.url.trim()) {
+        validateReferenceUrl(link.url);
+      }
+    }
+  }
+}
+
+function validateReferenceUrl(value: string) {
+  try {
+    const url = new URL(value.trim());
+    if (!["http:", "https:"].includes(url.protocol) || !url.hostname) {
+      throw new Error();
+    }
+  } catch {
+    throw new Error("Reference links must be valid http or https URLs.");
+  }
+}
+
+function cleanRoundDrafts(roundDrafts: RoundDraft[]) {
+  return roundDrafts.filter((item) => item.roundName.trim() || item.roundOrder.trim() || item.description.trim() || item.scheduledAt || item.finalRound);
+}
+
+function validateRoundDrafts(roundDrafts: RoundDraft[]) {
+  const drafts = cleanRoundDrafts(roundDrafts);
+  if (!drafts.length) {
+    return;
+  }
+  const finalCount = drafts.filter((item) => item.finalRound).length;
+  if (finalCount !== 1) {
+    throw new Error("Exactly one round must be marked as the final round.");
+  }
+  const seenOrders = new Set<number>();
+  for (const draft of drafts) {
+    if (!draft.roundName.trim()) {
+      throw new Error("Every round needs a round name. Complete it or remove the draft before saving.");
+    }
+    const order = Number(draft.roundOrder);
+    if (!Number.isInteger(order) || order < 1) {
+      throw new Error("Every round needs a valid order number.");
+    }
+    if (seenOrders.has(order)) {
+      throw new Error("Round order must be unique for each round.");
+    }
+    seenOrders.add(order);
+  }
+}
+
+function nextRoundOrder(roundDrafts: RoundDraft[]) {
+  const highestOrder = roundDrafts
+    .map((item) => Number(item.roundOrder))
+    .filter((value) => Number.isInteger(value) && value > 0)
+    .reduce((highest, value) => Math.max(highest, value), 0);
+  return highestOrder + 1;
 }
 
 function fromEvent(event: EventDetail): FormState {

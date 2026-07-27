@@ -1,6 +1,7 @@
 package com.kec.codingforum.event.dto;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 public record RoundResultDto(
         Long id,
@@ -14,6 +15,7 @@ public record RoundResultDto(
         String studentName,
         String registerNumber,
         String status,
+        BigDecimal marks,
         Long declaredByUserId,
         LocalDateTime declaredAt
 ) {

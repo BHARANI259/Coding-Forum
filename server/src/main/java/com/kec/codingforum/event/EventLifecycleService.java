@@ -18,8 +18,27 @@ public class EventLifecycleService {
     @Transactional
     public void syncCurrentLifecycle() {
         LocalDateTime now = LocalDateTime.now();
+        events.openCurrentRegistrationWindows(now);
         events.closeExpiredRegistrations(now);
         events.markStartedEventsOngoing(now);
+        events.markEndedEventsCompleted(now);
+    }
+
+    public boolean isRegistrationOpenNow(Event event) {
+        LocalDateTime now = LocalDateTime.now();
+        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus()) || "CANCELLED".equals(event.getStatus())) {
+            return false;
+        }
+        if (!"PUBLISHED".equals(event.getStatus())) {
+            return false;
+        }
+        if (event.getRegistrationStart() != null && now.isBefore(event.getRegistrationStart())) {
+            return false;
+        }
+        if (event.getRegistrationEnd() != null && now.isAfter(event.getRegistrationEnd())) {
+            return false;
+        }
+        return event.getStartDatetime() == null || now.isBefore(event.getStartDatetime());
     }
 
     @Scheduled(fixedDelayString = "${app.events.lifecycle-sync-ms:60000}")

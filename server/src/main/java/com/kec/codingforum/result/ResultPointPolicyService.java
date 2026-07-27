@@ -14,7 +14,8 @@ public class ResultPointPolicyService {
             "RUNNER_UP", 60,
             "SECOND_RUNNER_UP", 40,
             "PARTICIPANT", 10,
-            "DISQUALIFIED", 0
+            "DISQUALIFIED", 0,
+            "NOT_PRESENTED", 0
     );
 
     public int calculatePoints(String resultType, Event event) {

@@ -1,6 +1,7 @@
 package com.kec.codingforum.registration;
 
 import com.kec.codingforum.event.Event;
+import com.kec.codingforum.event.EventLifecycleService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -9,16 +10,27 @@ import java.time.LocalDateTime;
 public class EventCapacityService {
 
     private final RegistrationRepository registrations;
+    private final EventLifecycleService lifecycleService;
 
-    public EventCapacityService(RegistrationRepository registrations) {
+    public EventCapacityService(RegistrationRepository registrations, EventLifecycleService lifecycleService) {
         this.registrations = registrations;
+        this.lifecycleService = lifecycleService;
     }
 
     public void assertRegistrationOpen(Event event) {
+        LocalDateTime now = LocalDateTime.now();
+        if (event.isResultsPublished() || "COMPLETED".equals(event.getStatus())) {
+            throw new IllegalArgumentException("Event has been completed. Registration is closed.");
+        }
+        if ("CANCELLED".equals(event.getStatus())) {
+            throw new IllegalArgumentException("Event has been cancelled. Registration is closed.");
+        }
+        if (!"PUBLISHED".equals(event.getStatus())) {
+            throw new IllegalArgumentException("Registration is open only before the event starts.");
+        }
         if (!event.isRegistrationOpen()) {
             throw new IllegalArgumentException("Registration is closed for this event.");
         }
-        LocalDateTime now = LocalDateTime.now();
         if (event.getRegistrationStart() != null && now.isBefore(event.getRegistrationStart())) {
             throw new IllegalArgumentException("Registration window has not started.");
         }
@@ -27,6 +39,9 @@ public class EventCapacityService {
         }
         if (event.getEndDatetime() != null && now.isAfter(event.getEndDatetime())) {
             throw new IllegalArgumentException("Event has ended. Registration is closed.");
+        }
+        if (!lifecycleService.isRegistrationOpenNow(event)) {
+            throw new IllegalArgumentException("Registration is closed for this event.");
         }
     }
 

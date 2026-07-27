@@ -37,6 +37,275 @@ a {
   text-decoration: none;
 }
 
+.landing-page {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #111827;
+}
+
+.landing-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.03);
+  animation: landing-bg-settle 1.6s ease-out both;
+}
+
+.landing-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.28), transparent 34%),
+    linear-gradient(180deg, rgba(17, 24, 39, 0.2), rgba(17, 24, 39, 0.5));
+}
+
+.landing-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 4vh, 34px);
+  padding: clamp(18px, 4vw, 36px) 24px;
+}
+
+.landing-brand {
+  width: min(100%, 520px);
+  text-align: center;
+  color: #ffffff;
+  animation: landing-brand-in 0.75s ease-out both;
+}
+
+.landing-logo {
+  margin: 0 auto 14px;
+  height: clamp(64px, 10vw, 94px);
+  width: auto;
+  padding: 0;
+  filter: drop-shadow(0 10px 26px rgba(17, 24, 39, 0.42));
+}
+
+.landing-kicker {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 12px rgba(17, 24, 39, 0.45);
+}
+
+.landing-brand h1 {
+  margin: 8px 0 0;
+  color: #ffffff;
+  font-size: clamp(28px, 4vw, 46px);
+  font-weight: 900;
+  text-shadow: 0 3px 18px rgba(17, 24, 39, 0.55);
+}
+
+.landing-role-grid {
+  display: grid;
+  width: min(100%, 900px);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 2vw, 18px);
+}
+
+.landing-role-card {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  min-height: clamp(174px, 23vw, 220px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(196, 181, 253, 0.78);
+  border-radius: 18px;
+  background: rgba(245, 243, 255, 0.46);
+  box-shadow: 0 20px 60px rgba(17, 24, 39, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(10px);
+  color: #111827;
+  padding: clamp(16px, 2.4vw, 22px);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(18px) scale(0.97);
+  animation: landing-card-in 0.58s ease-out both;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-role-card:hover,
+.landing-role-card:focus-visible {
+  border-color: #8b5cf6;
+  box-shadow: 0 26px 75px rgba(109, 74, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  outline: none;
+  transform: translateY(-5px);
+}
+
+.landing-role-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(48px, 6vw, 58px);
+  height: clamp(48px, 6vw, 58px);
+  border-radius: 16px;
+  background: #f3edff;
+  color: #6d4aff;
+}
+
+.landing-role-icon svg {
+  width: clamp(25px, 3.2vw, 31px);
+  height: clamp(25px, 3.2vw, 31px);
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.landing-role-title {
+  margin-top: clamp(10px, 2vw, 16px);
+  font-size: clamp(18px, 2.4vw, 22px);
+  font-weight: 900;
+}
+
+.landing-role-subtitle {
+  margin-top: 8px;
+  max-width: 190px;
+  min-height: 40px;
+  color: #5b6472;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.landing-role-action {
+  margin-top: clamp(12px, 2vw, 18px);
+  border-radius: 999px;
+  background: #6d4aff;
+  color: #ffffff;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.landing-footer {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+  font-weight: 700;
+  text-shadow: 0 2px 12px rgba(17, 24, 39, 0.48);
+  animation: landing-brand-in 0.8s ease-out 0.3s both;
+}
+
+@keyframes landing-brand-in {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-card-in {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes landing-bg-settle {
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .landing-content {
+    justify-content: flex-start;
+    padding-top: 28px;
+    padding-bottom: 28px;
+  }
+
+  .landing-role-grid {
+    max-width: 680px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .landing-role-card {
+    min-height: 170px;
+  }
+
+  .landing-role-subtitle {
+    min-height: 38px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  .landing-role-grid {
+    max-width: 520px;
+    grid-template-columns: 1fr;
+  }
+
+  .landing-role-card {
+    aspect-ratio: auto;
+    min-height: 138px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .landing-role-icon {
+    grid-row: span 3;
+    margin-right: 12px;
+  }
+
+  .landing-role-title,
+  .landing-role-subtitle,
+  .landing-role-action {
+    margin-left: 0;
+  }
+
+  .landing-role-subtitle {
+    max-width: none;
+    min-height: 0;
+  }
+}
+
+@media (max-height: 720px) and (min-width: 761px) {
+  .landing-content {
+    gap: 16px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .landing-logo {
+    height: 64px;
+    margin-bottom: 8px;
+  }
+
+  .landing-kicker,
+  .landing-footer {
+    font-size: 12px;
+  }
+
+  .landing-brand h1 {
+    font-size: clamp(24px, 3vw, 34px);
+  }
+
+  .landing-role-card {
+    min-height: 150px;
+  }
+
+  .landing-role-subtitle {
+    display: none;
+  }
+}
+
 .auth-login-page {
   min-height: 100vh;
   display: flex;
@@ -44,6 +313,83 @@ a {
   justify-content: center;
   padding: 24px;
   background: url("/library-kec.png") center / cover no-repeat fixed;
+}
+
+.portal-access-loader {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(109, 74, 255, 0.16), transparent 32%),
+    #f5f6fa;
+}
+
+.portal-access-logo-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(78vw, 360px);
+  min-height: 150px;
+  overflow: hidden;
+}
+
+.portal-access-glow {
+  position: absolute;
+  inset: 20px 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(109, 74, 255, 0.22), transparent);
+  filter: blur(18px);
+  animation: portal-access-light 1.45s ease-in-out infinite;
+}
+
+.portal-access-logo {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 330px);
+  height: auto;
+  filter: drop-shadow(0 18px 34px rgba(17, 24, 39, 0.16));
+  animation: portal-access-logo-pulse 1.45s ease-in-out infinite;
+}
+
+.portal-access-loader p {
+  margin: 0;
+  color: #6d4aff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+@keyframes portal-access-logo-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.985);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes portal-access-light {
+  0% {
+    transform: translateX(-35%) scaleX(0.9);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translateX(0) scaleX(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(35%) scaleX(0.9);
+    opacity: 0.45;
+  }
 }
 
 .auth-login-card {
@@ -108,6 +454,28 @@ a {
 }
 
 @media (max-width: 640px) {
+  .landing-content {
+    gap: 18px;
+    justify-content: flex-start;
+    padding: 22px 16px;
+  }
+
+  .landing-logo {
+    height: 62px;
+    padding: 0;
+  }
+
+  .landing-role-grid {
+    grid-template-columns: 1fr;
+    max-width: 390px;
+    gap: 12px;
+  }
+
+  .landing-role-card {
+    aspect-ratio: auto;
+    min-height: 128px;
+  }
+
   .auth-login-page {
     padding: 16px;
     align-items: stretch;
