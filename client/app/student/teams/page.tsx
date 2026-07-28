@@ -1,25 +1,36 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
 import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import BackButton from "@/components/ui/BackButton";
 import { getCurrentUser } from "@/lib/auth";
-import { getMyTeams, joinTeamByCode, leaveTeam, type TeamDetail } from "@/lib/api";
+import {
+  getMyTeams,
+  getStudentProblemStatements,
+  joinTeamByCode,
+  leaveTeam,
+  registerTeam,
+  type ProblemStatement,
+  type TeamDetail
+} from "@/lib/api";
 
 export default function StudentTeamsPage() {
   const [teams, setTeams] = useState<TeamDetail[]>([]);
+  const [problemStatementsByEvent, setProblemStatementsByEvent] = useState<Record<number, ProblemStatement[]>>({});
+  const [selectedProblemByTeam, setSelectedProblemByTeam] = useState<Record<number, string>>({});
   const [teamCode, setTeamCode] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [enrollingTeamId, setEnrollingTeamId] = useState<number | null>(null);
   const currentStudentId = getCurrentUser()?.studentId;
 
   useEffect(() => {
@@ -29,7 +40,17 @@ export default function StudentTeamsPage() {
   async function loadTeams() {
     setLoading(true);
     try {
-      setTeams(await getMyTeams());
+      const teamList = await getMyTeams();
+      setTeams(teamList);
+      const eventIds = [...new Set(teamList.filter((team) => !team.lockedAfterRegistration).map((team) => team.eventId))];
+      const problemEntries = await Promise.all(eventIds.map(async (eventId) => {
+        try {
+          return [eventId, await getStudentProblemStatements(eventId)] as const;
+        } catch {
+          return [eventId, []] as const;
+        }
+      }));
+      setProblemStatementsByEvent(Object.fromEntries(problemEntries));
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to load teams.");
     } finally {
@@ -51,6 +72,27 @@ export default function StudentTeamsPage() {
       setError(exception instanceof Error ? exception.message : "Unable to join team.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleEnrollTeam(team: TeamDetail) {
+    const problems = problemStatementsByEvent[team.eventId] ?? [];
+    const selectedProblemId = selectedProblemByTeam[team.id] ? Number(selectedProblemByTeam[team.id]) : null;
+    if (problems.length && !selectedProblemId) {
+      setError("Please select a problem statement before enrolling this team.");
+      return;
+    }
+    setError("");
+    setSuccess("");
+    setEnrollingTeamId(team.id);
+    try {
+      await registerTeam(team.id, selectedProblemId);
+      setSuccess(`${team.teamName} has been enrolled successfully.`);
+      await loadTeams();
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Unable to enroll team.");
+    } finally {
+      setEnrollingTeamId(null);
     }
   }
 
@@ -85,17 +127,29 @@ export default function StudentTeamsPage() {
             const leader = currentStudentId === team.leaderStudentId;
             const minTeamSize = team.event.minTeamSize ?? 1;
             const minimumMet = team.members.length >= minTeamSize;
+            const problems = problemStatementsByEvent[team.eventId] ?? [];
             return [
               team.event.title,
               team.teamName,
               team.teamCode,
               `${team.members.length} of ${minTeamSize} minimum`,
-              team.problemStatementTitle ?? "-",
+              team.problemStatementTitle ?? (leader && !team.lockedAfterRegistration && problems.length ? (
+                <Select
+                  key={`problem-${team.id}`}
+                  label="Problem Statement"
+                  value={selectedProblemByTeam[team.id] ?? ""}
+                  onChange={(event) => setSelectedProblemByTeam((current) => ({ ...current, [team.id]: event.target.value }))}
+                  required
+                >
+                  <option value="">Select problem</option>
+                  {problems.map((problem) => <option key={problem.id} value={problem.id}>{problem.title}</option>)}
+                </Select>
+              ) : "-"),
               team.members.map((member) => member.leader ? `${member.name} (Leader)` : member.name).join(", "),
               <Badge key="status" variant={team.lockedAfterRegistration ? "success" : "warning"}>{team.lockedAfterRegistration ? "Registered" : "Open"}</Badge>,
               <div key="actions" className="flex flex-wrap gap-2">
                 {leader && !team.lockedAfterRegistration ? (
-                  minimumMet ? <Link href={`/student/events/${team.eventId}?action=register`}><Button type="button">Complete Enrollment</Button></Link>
+                  minimumMet ? <Button type="button" loading={enrollingTeamId === team.id} onClick={() => void handleEnrollTeam(team)}>Enroll Team</Button>
                     : <Button type="button" disabled>{`Need ${minTeamSize - team.members.length} more member${minTeamSize - team.members.length === 1 ? "" : "s"}`}</Button>
                 ) : null}
                 {!team.lockedAfterRegistration ? <Button type="button" variant="secondary" onClick={() => void handleLeave(team.id)}>Leave</Button> : null}

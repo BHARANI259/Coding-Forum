@@ -2,6 +2,7 @@ package com.kec.codingforum.team;
 
 import com.kec.codingforum.event.Event;
 import com.kec.codingforum.event.EventEligibilityService;
+import com.kec.codingforum.event.EventLifecycleService;
 import com.kec.codingforum.event.EventRepository;
 import com.kec.codingforum.notification.NotificationRecipientResolver;
 import com.kec.codingforum.notification.NotificationService;
@@ -33,6 +34,7 @@ public class TeamService {
     private final RegistrationRepository registrations;
     private final EventEligibilityService eligibilityService;
     private final EventCapacityService capacityService;
+    private final EventLifecycleService lifecycleService;
     private final NotificationService notificationService;
     private final NotificationRecipientResolver recipientResolver;
 
@@ -44,6 +46,7 @@ public class TeamService {
             RegistrationRepository registrations,
             EventEligibilityService eligibilityService,
             EventCapacityService capacityService,
+            EventLifecycleService lifecycleService,
             NotificationService notificationService,
             NotificationRecipientResolver recipientResolver
     ) {
@@ -54,12 +57,14 @@ public class TeamService {
         this.registrations = registrations;
         this.eligibilityService = eligibilityService;
         this.capacityService = capacityService;
+        this.lifecycleService = lifecycleService;
         this.notificationService = notificationService;
         this.recipientResolver = recipientResolver;
     }
 
     @Transactional
     public TeamDetailDto createTeam(Long eventId, Long studentId, String teamName) {
+        lifecycleService.syncCurrentLifecycle();
         Event event = eventForTeam(eventId);
         Student student = findStudent(studentId);
         assertPublishedOrOngoing(event);
@@ -86,6 +91,7 @@ public class TeamService {
 
     @Transactional
     public TeamDetailDto joinTeamByCode(Long studentId, String teamCode) {
+        lifecycleService.syncCurrentLifecycle();
         Team team = teams.findByTeamCodeIgnoreCase(required(teamCode, "Team code is required."))
                 .orElseThrow(() -> new IllegalArgumentException("Team not found."));
         Event event = team.getEvent();

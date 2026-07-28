@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "@/lib/api";
+import { API_ORIGIN } from "@/lib/api";
 import { cn } from "@/lib/cn";
 
 type EventPosterPreviewProps = {
@@ -38,6 +38,5 @@ export function toPublicImageUrl(value?: string | null) {
   if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("blob:") || value.startsWith("data:")) {
     return value;
   }
-  const apiOrigin = API_BASE_URL.replace(/\/api\/?$/, "");
-  return `${apiOrigin}${value}`;
+  return `${API_ORIGIN}${value}`;
 }

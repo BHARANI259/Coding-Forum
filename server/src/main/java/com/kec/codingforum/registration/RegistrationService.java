@@ -2,6 +2,7 @@ package com.kec.codingforum.registration;
 
 import com.kec.codingforum.event.Event;
 import com.kec.codingforum.event.EventEligibilityService;
+import com.kec.codingforum.event.EventLifecycleService;
 import com.kec.codingforum.event.EventProblemStatement;
 import com.kec.codingforum.event.EventProblemStatementService;
 import com.kec.codingforum.event.EventRepository;
@@ -35,6 +36,7 @@ public class RegistrationService {
     private final EventCapacityService capacityService;
     private final TeamService teamService;
     private final EventProblemStatementService problemStatementService;
+    private final EventLifecycleService lifecycleService;
     private final NotificationService notificationService;
     private final NotificationRecipientResolver recipientResolver;
 
@@ -47,6 +49,7 @@ public class RegistrationService {
             EventCapacityService capacityService,
             TeamService teamService,
             EventProblemStatementService problemStatementService,
+            EventLifecycleService lifecycleService,
             NotificationService notificationService,
             NotificationRecipientResolver recipientResolver
     ) {
@@ -58,12 +61,14 @@ public class RegistrationService {
         this.capacityService = capacityService;
         this.teamService = teamService;
         this.problemStatementService = problemStatementService;
+        this.lifecycleService = lifecycleService;
         this.notificationService = notificationService;
         this.recipientResolver = recipientResolver;
     }
 
     @Transactional
     public RegistrationDto registerIndividual(Long eventId, Long studentId, Long problemStatementId) {
+        lifecycleService.syncCurrentLifecycle();
         Event event = findEvent(eventId);
         Student student = findStudent(studentId);
         if (!"INDIVIDUAL".equals(event.getEventType())) {
@@ -100,6 +105,7 @@ public class RegistrationService {
 
     @Transactional
     public TeamRegistrationResponse registerTeam(Long teamId, Long leaderStudentId, Long problemStatementId) {
+        lifecycleService.syncCurrentLifecycle();
         Team team = teamService.findTeam(teamId);
         Event event = team.getEvent();
         if (!team.getLeaderStudent().getId().equals(leaderStudentId)) {
