@@ -41,6 +41,7 @@ type PwaContextValue = {
 
 const INSTALL_DISMISS_DURATION = 7 * 24 * 60 * 60 * 1000;
 const INSTALL_DISMISSED_KEY = "kec-forum-install-dismissed-at";
+const INSTALL_ACCEPTED_KEY = "kec-forum-install-accepted";
 
 const PwaInstallContext = createContext<PwaContextValue | null>(null);
 
@@ -81,6 +82,22 @@ function getDismissedUntilActive() {
   }
 }
 
+function getInstallAccepted() {
+  try {
+    return window.localStorage.getItem(INSTALL_ACCEPTED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function rememberInstallAccepted() {
+  try {
+    window.localStorage.setItem(INSTALL_ACCEPTED_KEY, "true");
+  } catch {
+    // Non-sensitive preference; safe to ignore when storage is unavailable.
+  }
+}
+
 export function PwaInstallProvider({ children }: { children: ReactNode }) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installInProgress, setInstallInProgress] = useState(false);
@@ -95,8 +112,9 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
   const hasReloadedRef = useRef(false);
 
   useEffect(() => {
-    setIsStandalone(isBrowserStandalone());
-    setIsInstalled(isBrowserStandalone());
+    const standalone = isBrowserStandalone();
+    setIsStandalone(standalone);
+    setIsInstalled(standalone || getInstallAccepted());
     setIsIos(isIosDevice());
     setInstallBannerDismissed(getDismissedUntilActive());
 
@@ -111,6 +129,7 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
       setDeferredPrompt(null);
       setShowIosGuide(false);
       setInstallBannerDismissed(true);
+      rememberInstallAccepted();
     };
 
     const handleDisplayModeChange = () => {
@@ -189,6 +208,8 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
       setDeferredPrompt(null);
       if (choice.outcome === "accepted") {
         setInstallBannerDismissed(true);
+        setIsInstalled(true);
+        rememberInstallAccepted();
       }
       return choice.outcome;
     } catch (error: unknown) {

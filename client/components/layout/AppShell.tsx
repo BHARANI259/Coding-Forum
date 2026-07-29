@@ -92,7 +92,7 @@ export default function AppShell({ expectedRole, title, children, fullWidth = fa
           title={title}
           onMenuClick={() => setMobileOpen(true)}
         />
-        <main className={fullWidth ? "min-w-0 max-w-full overflow-x-hidden px-3 py-3 sm:px-5 sm:py-5 lg:px-8 lg:py-6" : "mx-auto min-w-0 max-w-7xl overflow-x-hidden px-3 py-3 sm:px-5 sm:py-5 lg:px-8 lg:py-6"}>
+        <main className={fullWidth ? "min-w-0 max-w-full overflow-x-hidden px-3 pb-3 pt-20 sm:px-5 sm:pb-5 sm:pt-20 lg:px-8 lg:py-6" : "mx-auto min-w-0 max-w-7xl overflow-x-hidden px-3 pb-3 pt-20 sm:px-5 sm:pb-5 sm:pt-20 lg:px-8 lg:py-6"}>
           <PwaInstallBanner />
           {children}
         </main>

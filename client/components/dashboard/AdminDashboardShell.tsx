@@ -82,7 +82,7 @@ export default function AdminDashboardShell() {
         <StatCard label="Published Events" value={summary?.publishedEvents ?? 0} hint="Visible to students" />
         <StatCard label="Completed Events" value={summary?.completedEvents ?? 0} hint="Closed events" />
         <StatCard label="Total Registrations" value={summary?.totalRegistrations ?? 0} hint="Registered rows" />
-        <StatCard label="Total Teams" value={summary?.totalTeams ?? 0} hint="Created teams" />
+        <StatCard label="Total Teams" value={summary?.totalTeams ?? 0} hint="Registered teams" />
         <StatCard label="Total Results" value={summary?.totalResults ?? 0} hint="Declared results" />
         <StatCard label="Total Points Awarded" value={summary?.totalPointsAwarded ?? 0} hint="From student points" />
       </div>

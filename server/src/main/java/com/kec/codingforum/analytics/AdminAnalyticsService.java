@@ -48,7 +48,7 @@ public class AdminAnalyticsService {
                 countWhere("events", "status='COMPLETED'"),
                 countWhere("events", "status in ('PUBLISHED','ONGOING')"),
                 count("registrations"),
-                count("teams"),
+                countWhere("teams", "locked_after_registration=true"),
                 count("results"),
                 singleLong("select coalesce(sum(points),0) from student_points"),
                 count("event_problem_statements"),
@@ -318,7 +318,7 @@ public class AdminAnalyticsService {
                 left join registrations r on r.event_id=e.id and r.status='REGISTERED'
                 """);
         appendRegistrationJoinDateOnly(sql, params, fromDate, toDate);
-        sql.append(" left join teams t on t.event_id=e.id where 1=1 ");
+        sql.append(" left join teams t on t.event_id=e.id and t.locked_after_registration=true where 1=1 ");
         appendCategoryFilter(sql, params, categoryId, "e");
         if (status != null && !status.isBlank()) {
             sql.append(" and e.status=? ");
