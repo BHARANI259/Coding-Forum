@@ -68,7 +68,7 @@ export default function StudentEventDetailPage() {
       setEvent(eventData);
       setRounds(roundData);
       setProblemStatements(problemData);
-      setTeams(teamData.filter((team) => team.eventId === eventId));
+      setTeams(teamData.filter((team) => getTeamEventId(team) === eventId));
       const currentRegistration = registrationData.find((registration) => registration.eventId === eventId && registration.status === "REGISTERED");
       setAlreadyRegistered(Boolean(currentRegistration));
       if (currentRegistration?.problemStatementId) {
@@ -296,7 +296,18 @@ export default function StudentEventDetailPage() {
                     team.teamCode,
                     `${team.members.length} of ${event.minTeamSize ?? 1} minimum`,
                     team.members.map((member) => member.leader ? `${member.name} (Leader)` : member.name).join(", "),
-                    team.problemStatementTitle ?? "-",
+                    team.problemStatementTitle ?? (!team.lockedAfterRegistration && team.leaderStudentId === currentStudentId && problemStatements.length ? (
+                      <Select
+                        key={`problem-${team.id}`}
+                        label="Problem Statement"
+                        value={selectedProblemId}
+                        onChange={(changeEvent) => setSelectedProblemId(changeEvent.target.value)}
+                        required
+                      >
+                        <option value="">Select problem</option>
+                        {problemStatements.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+                      </Select>
+                    ) : !team.lockedAfterRegistration && team.leaderStudentId === currentStudentId ? "Select during enrollment" : "-"),
                     team.registrationStatus,
                     !team.lockedAfterRegistration && team.leaderStudentId === currentStudentId ? (
                       <Button
@@ -343,4 +354,8 @@ function shortUrl(value: string) {
   } catch {
     return value.length > 28 ? `${value.slice(0, 25)}...` : value;
   }
+}
+
+function getTeamEventId(team: TeamDetail) {
+  return team.eventId ?? team.event.id;
 }

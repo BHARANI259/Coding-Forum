@@ -42,7 +42,12 @@ export default function StudentTeamsPage() {
     try {
       const teamList = await getMyTeams();
       setTeams(teamList);
-      const eventIds = [...new Set(teamList.filter((team) => !team.lockedAfterRegistration).map((team) => team.eventId))];
+      setSelectedProblemByTeam(Object.fromEntries(teamList
+        .filter((team) => team.problemStatementId)
+        .map((team) => [team.id, String(team.problemStatementId)])));
+      const eventIds = [...new Set(teamList
+        .filter((team) => !team.lockedAfterRegistration)
+        .map((team) => getTeamEventId(team)))];
       const problemEntries = await Promise.all(eventIds.map(async (eventId) => {
         try {
           return [eventId, await getStudentProblemStatements(eventId)] as const;
@@ -76,7 +81,8 @@ export default function StudentTeamsPage() {
   }
 
   async function handleEnrollTeam(team: TeamDetail) {
-    const problems = problemStatementsByEvent[team.eventId] ?? [];
+    const eventId = getTeamEventId(team);
+    const problems = problemStatementsByEvent[eventId] ?? [];
     const selectedProblemId = selectedProblemByTeam[team.id] ? Number(selectedProblemByTeam[team.id]) : null;
     if (problems.length && !selectedProblemId) {
       setError("Please select a problem statement before enrolling this team.");
@@ -127,7 +133,8 @@ export default function StudentTeamsPage() {
             const leader = currentStudentId === team.leaderStudentId;
             const minTeamSize = team.event.minTeamSize ?? 1;
             const minimumMet = team.members.length >= minTeamSize;
-            const problems = problemStatementsByEvent[team.eventId] ?? [];
+            const eventId = getTeamEventId(team);
+            const problems = problemStatementsByEvent[eventId] ?? [];
             return [
               team.event.title,
               team.teamName,
@@ -144,7 +151,7 @@ export default function StudentTeamsPage() {
                   <option value="">Select problem</option>
                   {problems.map((problem) => <option key={problem.id} value={problem.id}>{problem.title}</option>)}
                 </Select>
-              ) : "-"),
+              ) : leader && !team.lockedAfterRegistration ? "Select during enrollment" : "-"),
               team.members.map((member) => member.leader ? `${member.name} (Leader)` : member.name).join(", "),
               <Badge key="status" variant={team.lockedAfterRegistration ? "success" : "warning"}>{team.lockedAfterRegistration ? "Registered" : "Open"}</Badge>,
               <div key="actions" className="grid gap-2 sm:flex sm:flex-wrap">
@@ -161,4 +168,8 @@ export default function StudentTeamsPage() {
       )}
     </AppShell>
   );
+}
+
+function getTeamEventId(team: TeamDetail) {
+  return team.eventId ?? team.event.id;
 }

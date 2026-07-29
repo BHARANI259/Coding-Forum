@@ -45,7 +45,7 @@ export default function EventSummary({ event }: EventSummaryProps) {
             </div>
           ) : null}
 
-          <div className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+          <div className="mt-5 grid overflow-hidden rounded-xl border border-slate-100 bg-slate-50/70 text-sm sm:grid-cols-2 sm:gap-4 sm:border-0 sm:bg-transparent">
             <Info label="Start" value={formatDate(event.startDatetime)} />
             <Info label="End" value={formatDate(event.endDatetime)} />
             <Info label="Registration Start" value={formatDate(event.registrationStart)} />
@@ -58,7 +58,7 @@ export default function EventSummary({ event }: EventSummaryProps) {
             <Info label="Problem Statements" value={event.problemStatementCount} />
           </div>
 
-          <div className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+          <div className="mt-5 grid overflow-hidden rounded-xl border border-slate-100 bg-slate-50/70 text-sm sm:grid-cols-2 sm:gap-4 sm:border-0 sm:bg-transparent">
             <Info label="Allowed Departments" value={event.allowedDepartments.map((item) => item.label).join(", ") || "All departments"} />
             <Info label="Allowed Years" value={event.allowedYears.join(", ") || "All years"} />
             <Info label="Allowed Sections" value={event.allowedSections.join(", ") || "All sections"} />
@@ -79,9 +79,9 @@ function humanize(value: string) {
 
 function Info({ label, value }: { label: string; value: string | number }) {
   return (
-    <div>
-      <p className="font-semibold text-kec-secondary">{label}</p>
-      <p className="mt-1 break-words text-kec-text">{value}</p>
+    <div className="grid grid-cols-[minmax(110px,40%)_1fr] gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0 sm:block sm:border-b-0 sm:p-0">
+      <p className="min-w-0 break-words font-bold text-kec-secondary">{label}</p>
+      <p className="min-w-0 break-words font-medium text-kec-text sm:mt-1">{value}</p>
     </div>
   );
 }

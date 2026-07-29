@@ -9,7 +9,7 @@ type TopbarProps = {
 
 export default function Topbar({ title, onMenuClick }: TopbarProps) {
   return (
-    <header className="sticky top-0 z-30 flex min-h-16 max-w-full items-center justify-between gap-2 border-b border-violet-500 bg-kec-purple px-3 py-2 shadow-sm sm:gap-3 sm:border-kec-border sm:bg-white sm:px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex min-h-16 max-w-full items-center justify-between gap-2 border-b border-white/10 bg-kec-sidebar px-3 py-2 shadow-sm sm:gap-3 sm:border-kec-border sm:bg-white sm:px-4 lg:px-6">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
@@ -19,10 +19,13 @@ export default function Topbar({ title, onMenuClick }: TopbarProps) {
         >
           Menu
         </button>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-white sm:hidden">{title}</p>
+        <div className="hidden min-w-0 sm:block">
           <Breadcrumbs title={title} />
         </div>
+      </div>
+
+      <div className="pointer-events-none absolute left-1/2 max-w-[calc(100%-7.5rem)] -translate-x-1/2 text-center text-sm font-black leading-5 text-white sm:hidden">
+        Kongu Engineering College
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
