@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LandingInstallCard } from "@/components/pwa/landing-install-card";
 
 const portals = [
   {
@@ -74,6 +75,8 @@ export default function Home() {
             </Link>
           ))}
         </div>
+
+        <LandingInstallCard />
 
         <p className="landing-footer">Academic Year 2026-27</p>
       </section>

@@ -419,6 +419,78 @@ a {
   font-weight: 800;
 }
 
+.landing-install-card {
+  display: flex;
+  width: min(100%, 900px);
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1.5px solid rgba(196, 181, 253, 0.78);
+  border-radius: 18px;
+  background: rgba(245, 243, 255, 0.34);
+  box-shadow: 0 18px 54px rgba(17, 24, 39, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  backdrop-filter: blur(10px);
+  color: #111827;
+  padding: 14px 16px;
+  animation: landing-card-in 0.58s ease-out 0.46s both;
+  opacity: 0;
+  transform: translateY(18px) scale(0.97);
+}
+
+.landing-install-copy {
+  min-width: 0;
+}
+
+.landing-install-label {
+  display: block;
+  color: #6d4aff;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.landing-install-copy p {
+  margin: 3px 0 0;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.landing-install-button,
+.landing-install-status,
+.landing-install-hint {
+  shrink: 0;
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.landing-install-button {
+  border: 0;
+  background: #6d4aff;
+  color: #ffffff;
+  box-shadow: 0 12px 30px rgba(109, 74, 255, 0.28);
+  cursor: pointer;
+}
+
+.landing-install-button:disabled {
+  cursor: wait;
+  opacity: 0.78;
+}
+
+.landing-install-status {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.landing-install-hint {
+  background: rgba(255, 255, 255, 0.46);
+  color: #4b5563;
+}
+
 .landing-footer {
   margin: 0;
   color: rgba(255, 255, 255, 0.88);
@@ -496,6 +568,10 @@ a {
     gap: 12px;
   }
 
+  .landing-install-card {
+    max-width: 520px;
+  }
+
   .landing-role-card {
     aspect-ratio: auto;
     min-height: 112px;
@@ -549,6 +625,20 @@ a {
 
   .landing-role-subtitle {
     font-size: 12px;
+  }
+
+  .landing-install-card {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .landing-install-button,
+  .landing-install-status,
+  .landing-install-hint {
+    width: 100%;
+    text-align: center;
   }
 
   .landing-footer {
