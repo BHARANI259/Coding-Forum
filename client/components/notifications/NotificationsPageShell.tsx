@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
 import Select from "@/components/ui/Select";
+import PushNotificationSettings from "@/components/notifications/PushNotificationSettings";
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -99,6 +100,7 @@ export default function NotificationsPageShell({ role, fallbackHref }: Notificat
         actions={<BackButton fallbackHref={fallbackHref} />}
       />
       {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+      <PushNotificationSettings />
       <Card className="mb-5">
         <div className="grid gap-4 md:grid-cols-[180px_260px_auto] md:items-end">
           <Select label="View" value={unreadOnly} onChange={(event) => setUnreadOnly(event.target.value)}>
@@ -128,7 +130,7 @@ export default function NotificationsPageShell({ role, fallbackHref }: Notificat
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="flex min-w-0 items-center gap-2">
-                  {!item.read ? <span className="h-2.5 w-2.5 rounded-full bg-kec-purple" /> : null}
+                  {!item.read ? <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-kec-purple" /> : null}
                   <h2 className="min-w-0 break-words text-base font-bold text-kec-text sm:truncate">{item.title}</h2>
                 </div>
                 <p className="mt-2 break-words text-sm text-kec-secondary">{item.message}</p>

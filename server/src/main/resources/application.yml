@@ -31,6 +31,10 @@ spring:
 
 server:
   port: ${PORT:8080}
+  compression:
+    enabled: ${SERVER_COMPRESSION_ENABLED:true}
+    min-response-size: 2KB
+    mime-types: application/json,text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/xml
 
 app:
   cors:
@@ -42,7 +46,20 @@ app:
     email-enabled: ${NOTIFICATION_EMAIL_ENABLED:false}
     websocket-enabled: ${NOTIFICATION_WEBSOCKET_ENABLED:true}
     from-name: ${NOTIFICATION_FROM_NAME:KEC Coding Forum}
+  web-push:
+    enabled: ${WEB_PUSH_ENABLED:false}
+    vapid-public-key: ${WEB_PUSH_VAPID_PUBLIC_KEY:}
+    vapid-private-key: ${WEB_PUSH_VAPID_PRIVATE_KEY:}
+    subject: ${WEB_PUSH_SUBJECT:mailto:admin@example.com}
   uploads:
     root-dir: ${UPLOAD_ROOT_DIR:uploads}
     event-posters-dir: ${EVENT_POSTERS_DIR:event-posters}
     event-media-dir: ${EVENT_MEDIA_DIR:event-media}
+  security:
+    csp-report-only: ${CSP_REPORT_ONLY:default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'}
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}
+      login-max-attempts: ${RATE_LIMIT_LOGIN_MAX_ATTEMPTS:12}
+      login-window-seconds: ${RATE_LIMIT_LOGIN_WINDOW_SECONDS:60}
+      password-max-attempts: ${RATE_LIMIT_PASSWORD_MAX_ATTEMPTS:5}
+      password-window-seconds: ${RATE_LIMIT_PASSWORD_WINDOW_SECONDS:300}

@@ -19,6 +19,8 @@ import java.util.List;
 @Service
 public class FacultyImportService {
 
+    private static final long MAX_IMPORT_SIZE_BYTES = 5 * 1024 * 1024;
+
     private final FacultyAdminService facultyAdminService;
     private final DepartmentRepository departments;
 
@@ -61,6 +63,9 @@ public class FacultyImportService {
     private List<ImportRow> readRows(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Import file is required.");
+        }
+        if (file.getSize() > MAX_IMPORT_SIZE_BYTES) {
+            throw new IllegalArgumentException("Import file must be 5 MB or smaller.");
         }
         String filename = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
         try {

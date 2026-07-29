@@ -58,8 +58,8 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <main className="min-h-screen bg-kec-bg px-4 py-6 sm:px-6 lg:py-10">
-      <section className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-xl items-center">
+    <main className="min-h-dvh overflow-x-hidden bg-kec-bg px-4 py-6 sm:px-6 lg:py-10">
+      <section className="mx-auto flex min-h-[calc(100dvh-5rem)] max-w-xl items-center">
         <Card className="w-full p-5 sm:p-8">
           <form onSubmit={handleSubmit}>
             <p className="text-sm font-semibold uppercase tracking-wide text-kec-purple">First Login</p>

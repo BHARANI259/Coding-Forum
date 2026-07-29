@@ -46,9 +46,9 @@ export default function EventPosterUpload({ event, selectedFile, onFileChange, o
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+    <div className="grid min-w-0 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
       <EventPosterPreview posterImageUrl={previewUrl} title={event?.title} className="aspect-video" />
-      <div>
+      <div className="min-w-0">
         <h3 className="text-sm font-bold text-kec-text">Event Flyer / Poster</h3>
         <p className="mt-1 text-sm text-kec-secondary">Upload JPG, PNG, or WEBP. Max size 5 MB.</p>
         {event?.posterOriginalName ? (
@@ -63,14 +63,14 @@ export default function EventPosterUpload({ event, selectedFile, onFileChange, o
           </div>
         ) : null}
         {fileError ? <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{fileError}</p> : null}
-        <div className="mt-4 flex flex-wrap gap-3">
-          <label className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-lg border border-kec-border bg-white px-4 py-2 text-sm font-semibold text-kec-text hover:bg-slate-50">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <label className="inline-flex min-h-10 w-full cursor-pointer items-center justify-center rounded-lg border border-kec-border bg-white px-4 py-2 text-sm font-semibold text-kec-text hover:bg-slate-50 sm:w-auto">
             {event?.posterImageUrl ? "Replace Poster" : "Upload Poster"}
             <input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" disabled={disabled} onChange={handleFileChange} />
           </label>
-          {selectedFile ? <Button type="button" variant="ghost" onClick={() => onFileChange(null)}>Clear Selection</Button> : null}
+          {selectedFile ? <Button type="button" className="w-full sm:w-auto" variant="ghost" onClick={() => onFileChange(null)}>Clear Selection</Button> : null}
           {event?.posterImageUrl && onRemove ? (
-            <Button type="button" variant="danger" loading={removing} onClick={onRemove}>Remove Poster</Button>
+            <Button type="button" className="w-full sm:w-auto" variant="danger" loading={removing} onClick={onRemove}>Remove Poster</Button>
           ) : null}
         </div>
       </div>

@@ -2,6 +2,9 @@ package com.kec.codingforum.notification;
 
 import com.kec.codingforum.notification.dto.NotificationDto;
 import com.kec.codingforum.notification.dto.UnreadCountResponse;
+import com.kec.codingforum.push.PushUrlService;
+import com.kec.codingforum.push.WebPushPayload;
+import com.kec.codingforum.push.WebPushService;
 import com.kec.codingforum.security.SecurityUtils;
 import com.kec.codingforum.user.User;
 import com.kec.codingforum.user.UserRepository;
@@ -22,19 +25,25 @@ public class NotificationService {
     private final NotificationTemplateService templates;
     private final EmailService emailService;
     private final WebSocketNotificationService webSocketNotificationService;
+    private final WebPushService webPushService;
+    private final PushUrlService pushUrlService;
 
     public NotificationService(
             NotificationRepository notifications,
             UserRepository users,
             NotificationTemplateService templates,
             EmailService emailService,
-            WebSocketNotificationService webSocketNotificationService
+            WebSocketNotificationService webSocketNotificationService,
+            WebPushService webPushService,
+            PushUrlService pushUrlService
     ) {
         this.notifications = notifications;
         this.users = users;
         this.templates = templates;
         this.emailService = emailService;
         this.webSocketNotificationService = webSocketNotificationService;
+        this.webPushService = webPushService;
+        this.pushUrlService = pushUrlService;
     }
 
     @Transactional
@@ -110,6 +119,16 @@ public class NotificationService {
             }
         }
         webSocketNotificationService.send(userId, toDto(saved));
+        webPushService.sendToUser(
+                userId,
+                new WebPushPayload(
+                        saved.getId(),
+                        saved.getNotificationType(),
+                        saved.getTitle(),
+                        saved.getMessage(),
+                        pushUrlService.urlFor(user.getRole(), saved.getRelatedEntityType(), saved.getRelatedEntityId())
+                )
+        );
     }
 
     private void mark(Notification notification) {

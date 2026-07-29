@@ -143,11 +143,11 @@ export default function FacultyEventDetailPage() {
           <EventMediaManager eventId={Number(params.id)} mode="faculty" eventCompleted={event.status === "COMPLETED" || event.resultsPublished} />
           <Card>
             <h2 className="text-base font-bold text-kec-text">Reports</h2>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button type="button" loading={reportDownloading === "pdf"} onClick={() => void downloadReport("pdf", () => downloadFacultyEventPdf(Number(params.id)))}>Download Event Report (PDF)</Button>
-              <Button type="button" variant="secondary" loading={reportDownloading === "students"} onClick={() => void downloadReport("students", () => downloadFacultyEventStudentsExcel(Number(params.id)))}>Download Participant List (Excel)</Button>
-              <Button type="button" variant="secondary" loading={reportDownloading === "teams"} onClick={() => void downloadReport("teams", () => downloadFacultyEventTeamsExcel(Number(params.id)))}>Download Team List (Excel)</Button>
-              <Button type="button" variant="secondary" loading={reportDownloading === "results"} onClick={() => void downloadReport("results", () => downloadFacultyEventResultsExcel(Number(params.id)))}>Download Result List (Excel)</Button>
+            <div className="mt-4 grid gap-3 sm:flex sm:flex-wrap">
+              <Button type="button" className="w-full sm:w-auto" loading={reportDownloading === "pdf"} onClick={() => void downloadReport("pdf", () => downloadFacultyEventPdf(Number(params.id)))}>Download Event Report (PDF)</Button>
+              <Button type="button" className="w-full sm:w-auto" variant="secondary" loading={reportDownloading === "students"} onClick={() => void downloadReport("students", () => downloadFacultyEventStudentsExcel(Number(params.id)))}>Download Participant List (Excel)</Button>
+              <Button type="button" className="w-full sm:w-auto" variant="secondary" loading={reportDownloading === "teams"} onClick={() => void downloadReport("teams", () => downloadFacultyEventTeamsExcel(Number(params.id)))}>Download Team List (Excel)</Button>
+              <Button type="button" className="w-full sm:w-auto" variant="secondary" loading={reportDownloading === "results"} onClick={() => void downloadReport("results", () => downloadFacultyEventResultsExcel(Number(params.id)))}>Download Result List (Excel)</Button>
             </div>
           </Card>
           <Card>
@@ -181,9 +181,9 @@ export default function FacultyEventDetailPage() {
                   round.resultPublished ? "Published / Locked" : "Not Published",
                   formatDateTime(round.resultPublishedAt),
                   <div key="actions" className="flex flex-wrap gap-2">
-                    {round.status === "NOT_STARTED" && eventActive ? <Button type="button" variant="secondary" onClick={() => void handleRoundStatus(round.id, "ONGOING")}>Start Round</Button> : null}
+                    {round.status === "NOT_STARTED" && eventActive ? <Button type="button" className="w-full sm:w-auto" variant="secondary" onClick={() => void handleRoundStatus(round.id, "ONGOING")}>Start Round</Button> : null}
                     {round.status === "ONGOING" && eventActive ? (
-                      <Button type="button" loading={publishingRoundId === round.id} onClick={() => void publishRound(round)}>
+                      <Button type="button" className="w-full sm:w-auto" loading={publishingRoundId === round.id} onClick={() => void publishRound(round)}>
                         {round.finalRound ? "Publish Final Result" : "Publish Round Result"}
                       </Button>
                     ) : null}

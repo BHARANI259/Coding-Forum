@@ -35,8 +35,31 @@ export default function NotificationButton() {
       }
     }
 
+    async function refreshRecent() {
+      try {
+        const [recent, count] = await Promise.all([getRecentNotifications(), getUnreadNotificationCount()]);
+        setItems(recent);
+        setUnreadCount(count.count);
+      } catch {
+        // Push foreground refresh is best effort.
+      }
+    }
+
+    function handleServiceWorkerMessage(event: MessageEvent) {
+      if (event.data?.type === "PUSH_NOTIFICATION_RECEIVED") {
+        void refreshRecent();
+      }
+      if (event.data?.type === "PUSH_NOTIFICATION_CLICKED") {
+        const url = typeof event.data.payload?.url === "string" ? event.data.payload.url : "";
+        if (url.startsWith("/") && !url.startsWith("//")) {
+          router.push(url);
+        }
+      }
+    }
+
     void loadCount();
     pollId = setInterval(() => void loadCount(), 45000);
+    navigator.serviceWorker?.addEventListener("message", handleServiceWorkerMessage);
 
     const token = getToken();
     if (token) {
@@ -54,9 +77,10 @@ export default function NotificationButton() {
       if (pollId) {
         clearInterval(pollId);
       }
+      navigator.serviceWorker?.removeEventListener("message", handleServiceWorkerMessage);
       socket?.close();
     };
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -152,11 +176,11 @@ export default function NotificationButton() {
                 onClick={() => void openNotification(item)}
                 className="flex w-full gap-3 border-b border-kec-border px-4 py-3 text-left hover:bg-kec-bg"
               >
-                <span className={`mt-1 h-2.5 w-2.5 rounded-full ${item.read ? "bg-kec-border" : "bg-kec-purple"}`} />
+                <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${item.read ? "bg-kec-border" : "bg-kec-purple"}`} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-bold text-kec-text">{item.title}</span>
                   <span className="mt-1 line-clamp-2 block text-xs text-kec-secondary">{item.message}</span>
-                  <span className="mt-2 flex items-center gap-2 text-xs text-kec-muted">
+                  <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-kec-muted">
                     <span>{shortTime(item.createdAt)}</span>
                     <span>{item.notificationType.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())}</span>
                   </span>

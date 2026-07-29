@@ -46,8 +46,8 @@ export default function DataTable({ headers, rows = [], emptyMessage = "No recor
       <p className="hidden border-b border-kec-border bg-slate-50 px-4 py-2 text-xs text-kec-muted sm:block lg:hidden">
         Scroll horizontally to view all columns.
       </p>
-      <div className="hidden overflow-x-auto focus:outline-none focus:ring-2 focus:ring-inset focus:ring-kec-purple sm:block" tabIndex={0} role="region" aria-label="Scrollable data table">
-        <table className="min-w-full divide-y divide-kec-border text-sm">
+      <div className="hidden w-full overflow-x-auto focus:outline-none focus:ring-2 focus:ring-inset focus:ring-kec-purple sm:block" tabIndex={0} role="region" aria-label="Scrollable data table">
+        <table className="min-w-[720px] divide-y divide-kec-border text-sm">
           <thead className="bg-slate-50">
             <tr>
               {headers.map((header) => (

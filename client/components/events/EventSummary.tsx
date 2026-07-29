@@ -23,11 +23,11 @@ export default function EventSummary({ event }: EventSummaryProps) {
         />
         <div className="min-w-0">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <h2 className="break-words text-lg font-bold text-kec-text sm:text-xl">{event.title}</h2>
-              <p className="mt-1 text-sm text-kec-secondary">{event.category?.name ?? "Uncategorized"} - {event.venue ?? "Venue not set"}</p>
+              <p className="mt-1 break-words text-sm text-kec-secondary">{event.category?.name ?? "Uncategorized"} - {event.venue ?? "Venue not set"}</p>
               {event.posterOriginalName ? (
-                <p className="mt-2 text-xs font-semibold text-kec-muted">Poster: {event.posterOriginalName}</p>
+                <p className="mt-2 break-words text-xs font-semibold text-kec-muted">Poster: {event.posterOriginalName}</p>
               ) : null}
             </div>
             <div className="flex max-w-full flex-wrap gap-2">

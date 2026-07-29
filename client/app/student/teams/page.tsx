@@ -117,7 +117,7 @@ export default function StudentTeamsPage() {
         <h2 className="text-base font-bold text-kec-text">Join Team</h2>
         <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleJoin}>
           <Input label="Team Code" value={teamCode} onChange={(event) => setTeamCode(event.target.value)} required />
-          <Button type="submit" loading={saving}>Join Team</Button>
+          <Button type="submit" className="w-full sm:w-auto" loading={saving}>Join Team</Button>
         </form>
       </Card>
       {loading ? <Card>Loading teams...</Card> : (
@@ -147,12 +147,12 @@ export default function StudentTeamsPage() {
               ) : "-"),
               team.members.map((member) => member.leader ? `${member.name} (Leader)` : member.name).join(", "),
               <Badge key="status" variant={team.lockedAfterRegistration ? "success" : "warning"}>{team.lockedAfterRegistration ? "Registered" : "Open"}</Badge>,
-              <div key="actions" className="flex flex-wrap gap-2">
+              <div key="actions" className="grid gap-2 sm:flex sm:flex-wrap">
                 {leader && !team.lockedAfterRegistration ? (
-                  minimumMet ? <Button type="button" loading={enrollingTeamId === team.id} onClick={() => void handleEnrollTeam(team)}>Enroll Team</Button>
-                    : <Button type="button" disabled>{`Need ${minTeamSize - team.members.length} more member${minTeamSize - team.members.length === 1 ? "" : "s"}`}</Button>
+                  minimumMet ? <Button type="button" className="w-full sm:w-auto" loading={enrollingTeamId === team.id} onClick={() => void handleEnrollTeam(team)}>Enroll Team</Button>
+                    : <Button type="button" className="w-full sm:w-auto" disabled>{`Need ${minTeamSize - team.members.length} more member${minTeamSize - team.members.length === 1 ? "" : "s"}`}</Button>
                 ) : null}
-                {!team.lockedAfterRegistration ? <Button type="button" variant="secondary" onClick={() => void handleLeave(team.id)}>Leave</Button> : null}
+                {!team.lockedAfterRegistration ? <Button type="button" className="w-full sm:w-auto" variant="secondary" onClick={() => void handleLeave(team.id)}>Leave</Button> : null}
               </div>
             ];
           })}

@@ -163,11 +163,11 @@ export default function EventMediaManager({ eventId, mode, eventCompleted = fals
       {error ? <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       {success ? <p className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</p> : null}
 
-      <form className="mt-4 grid gap-4 rounded-xl border border-kec-border p-3 sm:p-4 lg:grid-cols-[1fr_220px_1fr_auto]" onSubmit={upload}>
+      <form className="mt-4 grid min-w-0 gap-4 rounded-xl border border-kec-border p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_220px_minmax(0,1fr)_auto]" onSubmit={upload}>
         <label className="block">
           <span className="text-sm font-semibold text-kec-text">Images</span>
           <input
-            className="mt-2 block w-full rounded-lg border border-kec-border px-3 py-2 text-base file:mr-3 file:rounded-md file:border-0 file:bg-kec-purple file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white sm:text-sm"
+            className="mt-2 block w-full min-w-0 rounded-lg border border-kec-border px-3 py-2 text-base file:mr-3 file:rounded-md file:border-0 file:bg-kec-purple file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white sm:text-sm"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             multiple
@@ -192,7 +192,7 @@ export default function EventMediaManager({ eventId, mode, eventCompleted = fals
       ) : null}
       <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {items.map((item) => (
-          <div key={item.id} className="overflow-hidden rounded-xl border border-kec-border bg-white">
+          <div key={item.id} className="min-w-0 overflow-hidden rounded-xl border border-kec-border bg-white">
             <AuthenticatedMediaImage eventId={eventId} mediaId={item.id} mode={mode} alt={item.caption ?? item.originalFileName} />
             <div className="space-y-3 p-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -212,8 +212,8 @@ export default function EventMediaManager({ eventId, mode, eventCompleted = fals
                 </div>
               ) : (
                 <>
-                  <p className="text-sm font-semibold text-kec-text">{item.caption || "No caption"}</p>
-                  <p className="text-xs text-kec-secondary">Uploaded by {item.uploadedByName}</p>
+                  <p className="break-words text-sm font-semibold text-kec-text">{item.caption || "No caption"}</p>
+                  <p className="break-words text-xs text-kec-secondary">Uploaded by {item.uploadedByName}</p>
                   <p className="text-xs text-kec-muted">{formatDateTime(item.uploadedAt)}</p>
                   {canManage(item) ? (
                     <div className="grid gap-2 sm:flex sm:flex-wrap">

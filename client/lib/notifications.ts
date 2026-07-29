@@ -51,8 +51,14 @@ export function connectNotificationSocket(token: string, onMessage: (notificatio
 }
 
 export function shortTime(value: string) {
-  const timestamp = new Date(value).getTime();
-  const diffSeconds = Math.max(1, Math.floor((Date.now() - timestamp) / 1000));
+  const timestamp = parseNotificationTimestamp(value);
+  if (!Number.isFinite(timestamp)) {
+    return formatDate(value);
+  }
+  const diffSeconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (diffSeconds < 30) {
+    return "just now";
+  }
   if (diffSeconds < 60) {
     return `${diffSeconds}s ago`;
   }
@@ -65,4 +71,10 @@ export function shortTime(value: string) {
     return `${diffHours}h ago`;
   }
   return formatDate(value);
+}
+
+function parseNotificationTimestamp(value: string) {
+  const normalized = value.trim();
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalized);
+  return new Date(hasTimezone ? normalized : `${normalized}Z`).getTime();
 }

@@ -1,5 +1,6 @@
 import Breadcrumbs from "./Breadcrumbs";
 import NotificationButton from "@/components/notifications/NotificationButton";
+import { InstallAppButton } from "@/components/pwa/install-app-button";
 
 type TopbarProps = {
   title: string;
@@ -8,13 +9,13 @@ type TopbarProps = {
 
 export default function Topbar({ title, onMenuClick }: TopbarProps) {
   return (
-    <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-kec-border bg-white px-3 py-2 sm:px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex min-h-16 max-w-full items-center justify-between gap-2 border-b border-kec-border bg-white px-3 py-2 sm:gap-3 sm:px-4 lg:px-6">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
           aria-label="Open sidebar"
           onClick={onMenuClick}
-          className="rounded-lg border border-kec-border px-3 py-2 text-sm font-semibold text-kec-text lg:hidden"
+          className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-kec-border px-3 py-2 text-sm font-semibold text-kec-text lg:hidden"
         >
           Menu
         </button>
@@ -25,8 +26,9 @@ export default function Topbar({ title, onMenuClick }: TopbarProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <InstallAppButton compact className="hidden sm:inline-flex" />
         <NotificationButton />
-        <div className="hidden text-sm font-semibold text-kec-secondary sm:block">Kongu Engineering College</div>
+        <div className="hidden max-w-[220px] truncate text-sm font-semibold text-kec-secondary sm:block">Kongu Engineering College</div>
       </div>
     </header>
   );

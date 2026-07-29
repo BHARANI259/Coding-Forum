@@ -51,6 +51,12 @@ MAIL_HOST
 MAIL_PORT
 MAIL_USERNAME
 MAIL_PASSWORD
+CSP_REPORT_ONLY
+RATE_LIMIT_ENABLED
+RATE_LIMIT_LOGIN_MAX_ATTEMPTS
+RATE_LIMIT_LOGIN_WINDOW_SECONDS
+RATE_LIMIT_PASSWORD_MAX_ATTEMPTS
+RATE_LIMIT_PASSWORD_WINDOW_SECONDS
 ```
 
 Set `FRONTEND_ORIGIN` to the deployed frontend origin, for example:
@@ -130,6 +136,8 @@ psql -h localhost -U postgres -d postgres -f server/db/postgres_setup.sql
 - Set strong `JWT_SECRET`.
 - Set `FRONTEND_ORIGIN` to the exact frontend URL.
 - Set `NEXT_PUBLIC_API_URL` to the backend API URL.
+- Keep `RATE_LIMIT_ENABLED=true` unless a gateway/WAF already provides equivalent login throttling.
+- Keep `CSP_REPORT_ONLY` in report-only mode until violations are reviewed in production logs/browser console.
 - Ensure upload directory is persistent.
 - Keep email disabled unless SMTP is configured.
 - Confirm `GET /api/health` returns `UP`.

@@ -7,10 +7,11 @@ import { roleNavigation } from "@/lib/navigation";
 import { cn } from "@/lib/cn";
 import RoleBadge from "@/components/ui/RoleBadge";
 import Button from "@/components/ui/Button";
+import { InstallAppButton } from "@/components/pwa/install-app-button";
 
 type SidebarProps = {
   user: CurrentUser;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
   onNavigate?: () => void;
 };
 
@@ -20,7 +21,7 @@ export default function Sidebar({ user, onLogout, onNavigate }: SidebarProps) {
   const displayName = user.name || user.email;
 
   return (
-    <aside className="flex h-full w-[260px] flex-col bg-kec-sidebar text-white">
+    <aside className="flex h-full w-full min-w-0 flex-col bg-kec-sidebar text-white">
       <div className="border-b border-white/10 px-5 py-5">
         <img
           src="/logo.png"
@@ -43,7 +44,7 @@ export default function Sidebar({ user, onLogout, onNavigate }: SidebarProps) {
                 href={item.href}
                 onClick={onNavigate}
                 className={cn(
-                  "block rounded-lg px-3 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-kec-purpleActive",
+                  "block min-h-10 rounded-lg px-3 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-kec-purpleActive",
                   active && "bg-kec-purpleActive text-white shadow-sm"
                 )}
               >
@@ -68,6 +69,7 @@ export default function Sidebar({ user, onLogout, onNavigate }: SidebarProps) {
         >
           Logout
         </Button>
+        <InstallAppButton className="mt-3 w-full border-white/15 bg-white/10 text-white hover:bg-white/15" />
       </div>
     </aside>
   );

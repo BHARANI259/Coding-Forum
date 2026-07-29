@@ -412,7 +412,7 @@ export default function AdminEventDetailPage() {
               </div>
               {!eventClosed && editingProblemId ? <Button type="button" variant="secondary" onClick={() => { setEditingProblemId(null); setProblemForm(emptyProblemForm()); }}>Cancel Edit</Button> : null}
             </div>
-            {!eventClosed ? <form className="mt-4 space-y-4 rounded-xl border border-kec-border p-4" onSubmit={handleSaveProblem}>
+            {!eventClosed ? <form className="mt-4 space-y-4 rounded-xl border border-kec-border p-3 sm:p-4" onSubmit={handleSaveProblem}>
               <div className="grid gap-3 md:grid-cols-2">
                 <Input label="Title" value={problemForm.title} onChange={(changeEvent) => setProblemForm({ ...problemForm, title: changeEvent.target.value })} required />
                 <label className="flex items-end gap-2 pb-3 text-sm font-semibold text-kec-text">
@@ -431,16 +431,16 @@ export default function AdminEventDetailPage() {
                 </div>
                 <div className="mt-3 space-y-3">
                   {problemForm.links.map((link, index) => (
-                    <div key={index} className="grid gap-3 rounded-lg border border-kec-border p-3 md:grid-cols-[1fr_2fr_auto]">
+                    <div key={index} className="grid gap-3 rounded-lg border border-kec-border p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]">
                       <Input label="Label" value={link.label ?? ""} onChange={(changeEvent) => updateProblemLink(index, { label: changeEvent.target.value })} />
                       <Input label="URL" type="url" value={link.url} onChange={(changeEvent) => updateProblemLink(index, { url: changeEvent.target.value })} />
-                      <Button className="self-end" type="button" variant="ghost" onClick={() => removeProblemLink(index)}>Remove</Button>
+                      <Button className="w-full self-end md:w-auto" type="button" variant="ghost" onClick={() => removeProblemLink(index)}>Remove</Button>
                     </div>
                   ))}
                   {!problemForm.links.length ? <p className="text-sm text-kec-muted">Reference links are optional. Add Google Drive, docs, websites, or dataset links if available.</p> : null}
                 </div>
               </div>
-              <Button type="submit">{editingProblemId ? "Save Problem Statement" : "Add Problem Statement"}</Button>
+              <Button type="submit" className="w-full sm:w-auto">{editingProblemId ? "Save Problem Statement" : "Add Problem Statement"}</Button>
             </form> : <p className="mt-3 text-sm text-kec-secondary">Problem statements are retained for reference and cannot be changed after the event closes.</p>}
             <div className="mt-4">
               <DataTable
@@ -471,7 +471,7 @@ export default function AdminEventDetailPage() {
             </div>
 
             {setupEditable && !finalRoundAssigned ? (
-              <form className="mt-4 rounded-xl border border-kec-border p-4" onSubmit={handleCreateRound}>
+              <form className="mt-4 rounded-xl border border-kec-border p-3 sm:p-4" onSubmit={handleCreateRound}>
                 <div>
                   <h3 className="text-sm font-bold text-kec-text">Add New Round</h3>
                   <p className="mt-1 text-sm text-kec-secondary">Define the round name, order, and whether it is the final round.</p>
@@ -506,7 +506,7 @@ export default function AdminEventDetailPage() {
                     </button>
                     <span>Final Round</span>
                   </label>
-                  <Button type="submit">Save Round</Button>
+                  <Button type="submit" className="w-full md:w-auto">Save Round</Button>
                 </div>
               </form>
             ) : finalRoundAssigned ? (
@@ -565,11 +565,12 @@ export default function AdminEventDetailPage() {
 
                         <div className="flex flex-wrap gap-2 lg:justify-end">
                           {round.status === "NOT_STARTED" && eventActive ? (
-                            <Button variant="secondary" type="button" onClick={() => void handleRoundStatus(round.id, "ONGOING")}>Start Round</Button>
+                              <Button className="w-full sm:w-auto" variant="secondary" type="button" onClick={() => void handleRoundStatus(round.id, "ONGOING")}>Start Round</Button>
                           ) : null}
                           {round.status === "ONGOING" && eventActive ? (
-                            <Button
-                              type="button"
+                              <Button
+                                className="w-full sm:w-auto"
+                                type="button"
                               loading={publishingRoundId === round.id}
                               onClick={() => void handlePublishRound(round)}
                             >

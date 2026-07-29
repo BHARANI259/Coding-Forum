@@ -34,6 +34,7 @@ import java.util.Set;
 @Service
 public class EventRoundResultService {
 
+    private static final long MAX_MARKS_IMPORT_SIZE_BYTES = 5 * 1024 * 1024;
     private static final Set<String> NON_FINAL_STATUSES = Set.of("SELECTED", "QUALIFIED", "DISQUALIFIED", "NOT_PRESENTED");
     private static final Set<String> FINAL_STATUSES = Set.of("WINNER", "RUNNER_UP", "SECOND_RUNNER_UP", "PARTICIPANT", "DISQUALIFIED", "NOT_PRESENTED");
 
@@ -193,6 +194,9 @@ public class EventRoundResultService {
         }
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Choose an Excel file to import marks.");
+        }
+        if (file.getSize() > MAX_MARKS_IMPORT_SIZE_BYTES) {
+            throw new IllegalArgumentException("Marks import file must be 5 MB or smaller.");
         }
         String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
         if (!name.endsWith(".xlsx") && !name.endsWith(".xls")) {

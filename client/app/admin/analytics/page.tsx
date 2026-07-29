@@ -1,21 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from "recharts";
 import AppShell from "@/components/layout/AppShell";
 import BackButton from "@/components/ui/BackButton";
 import Button from "@/components/ui/Button";
@@ -68,7 +54,29 @@ const emptyFilters: AnalyticsFiltersState = {
   toDate: ""
 };
 
-const chartColors = ["#6D4CC2", "#2563EB", "#16A34A", "#F59E0B", "#DC2626", "#0891B2", "#9333EA"];
+const BarComparisonChart = dynamic(
+  () => import("@/components/analytics/AdminAnalyticsCharts").then((module) => module.BarComparisonChart),
+  {
+    ssr: false,
+    loading: () => <ChartSkeleton />,
+  }
+);
+
+const RegistrationTrendChart = dynamic(
+  () => import("@/components/analytics/AdminAnalyticsCharts").then((module) => module.RegistrationTrendChart),
+  {
+    ssr: false,
+    loading: () => <ChartSkeleton />,
+  }
+);
+
+const PiePanel = dynamic(
+  () => import("@/components/analytics/AdminAnalyticsCharts").then((module) => module.PiePanel),
+  {
+    ssr: false,
+    loading: () => <ChartSkeleton />,
+  }
+);
 
 export default function AdminAnalyticsPage() {
   const [filters, setFilters] = useState<AnalyticsFiltersState>(emptyFilters);
@@ -245,31 +253,25 @@ export default function AdminAnalyticsPage() {
 
       <div className="mt-6 space-y-6">
         <ChartCard title="Department-wise Participation" subtitle="Registrations and unique students by department." loading={loading} error={sectionErrors.departmentParticipation} empty={!hasChartData(departmentParticipationRows, ["registrations", "students"])}>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={departmentParticipationRows}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="department" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="registrations" fill="#6D4CC2" name="Registrations" />
-              <Bar dataKey="students" fill="#2563EB" name="Unique Students" />
-            </BarChart>
-          </ResponsiveContainer>
+          <BarComparisonChart
+            data={departmentParticipationRows}
+            xKey="department"
+            bars={[
+              { key: "registrations", name: "Registrations", color: "#6D4CC2" },
+              { key: "students", name: "Unique Students", color: "#2563EB" },
+            ]}
+          />
         </ChartCard>
 
         <ChartCard title="Department-wise Points" subtitle="Performance from student_points." loading={loading} error={sectionErrors.departmentPoints} empty={!hasChartData(departmentPointsRows, ["points", "wins"])}>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={departmentPointsRows}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="department" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="points" fill="#6D4CC2" name="Points" />
-              <Bar dataKey="wins" fill="#16A34A" name="Wins" />
-            </BarChart>
-          </ResponsiveContainer>
+          <BarComparisonChart
+            data={departmentPointsRows}
+            xKey="department"
+            bars={[
+              { key: "points", name: "Points", color: "#6D4CC2" },
+              { key: "wins", name: "Wins", color: "#16A34A" },
+            ]}
+          />
         </ChartCard>
 
         <ChartCard title="Event Category Participation" subtitle="Which event categories attract registrations." loading={loading} error={sectionErrors.categoryParticipation} empty={!hasPieData(categoryRows)}>
@@ -277,15 +279,7 @@ export default function AdminAnalyticsPage() {
         </ChartCard>
 
         <ChartCard title="Registration Trend" subtitle="Daily registration activity. Defaults to the last 30 days." loading={loading} error={sectionErrors.registrationTrend} empty={!hasChartData(registrationTrend, ["registrationCount"])}>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={registrationTrend}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="period" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Line type="monotone" dataKey="registrationCount" stroke="#6D4CC2" strokeWidth={2} name="Registrations" />
-            </LineChart>
-          </ResponsiveContainer>
+          <RegistrationTrendChart data={registrationTrend} />
         </ChartCard>
 
         <ChartCard title="Result Distribution" subtitle="Final result tags across declared results." loading={loading} error={sectionErrors.resultDistribution} empty={!hasPieData(resultRows)}>
@@ -382,19 +376,11 @@ function ScrollableTable({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PiePanel({ data }: { data: Array<{ name: string; value: number }> }) {
+function ChartSkeleton() {
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" outerRadius={96} innerRadius={48} paddingAngle={2}>
-          {data.map((entry, index) => (
-            <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
-          ))}
-        </Pie>
-        <Tooltip />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed border-kec-border text-sm text-kec-muted">
+      Loading chart...
+    </div>
   );
 }
 

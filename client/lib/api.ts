@@ -1,3 +1,5 @@
+import type { PushDevice, PushSubscriptionPayload } from "@/types/push-notification";
+
 const RAW_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
 
 function normalizeApiBaseUrl(value: string) {
@@ -684,10 +686,47 @@ type ApiError = {
   message?: string;
 };
 
+const GET_TIMEOUT_MS = 20000;
+const MUTATION_TIMEOUT_MS = 60000;
+const DOWNLOAD_TIMEOUT_MS = 120000;
+const inFlightGetRequests = new Map<string, Promise<unknown>>();
+
 function wait(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function timeoutMessage(method: string) {
+  return method === "GET"
+    ? "The portal is taking too long to load this data. Please check your connection and try again."
+    : "The request is taking longer than expected. Please check whether it completed before trying again.";
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+function withTimeoutSignal(externalSignal: AbortSignal | null | undefined, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  const handleExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener("abort", handleExternalAbort, { once: true });
+    }
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      window.clearTimeout(timeoutId);
+      externalSignal?.removeEventListener("abort", handleExternalAbort);
+    },
+  };
 }
 
 export async function apiFetch<T>(
@@ -710,20 +749,40 @@ export async function apiFetch<T>(
   let response: Response;
   const url = `${API_BASE_URL}${endpoint}`;
   const method = options.method?.toUpperCase() ?? "GET";
+  const canDedupe = method === "GET" && !options.signal;
+  const dedupeKey = canDedupe ? `${url}|${headers.get("Authorization") ?? ""}` : "";
+  if (dedupeKey && inFlightGetRequests.has(dedupeKey)) {
+    return inFlightGetRequests.get(dedupeKey) as Promise<T>;
+  }
+
+  const runRequest = async () => {
+    const timeout = typeof window === "undefined" ? null : withTimeoutSignal(options.signal, method === "GET" ? GET_TIMEOUT_MS : MUTATION_TIMEOUT_MS);
+    try {
+      return await fetch(url, {
+        ...options,
+        headers,
+        signal: timeout?.signal ?? options.signal,
+      });
+    } finally {
+      timeout?.cleanup();
+    }
+  };
+
+  const requestPromise = (async () => {
   try {
-    response = await fetch(url, {
-      ...options,
-      headers
-    });
-  } catch {
+    response = await runRequest();
+  } catch (exception) {
+    if (isAbortError(exception)) {
+      throw new Error(timeoutMessage(method));
+    }
     if (method === "GET") {
       await wait(300);
       try {
-        response = await fetch(url, {
-          ...options,
-          headers
-        });
-      } catch {
+        response = await runRequest();
+      } catch (retryException) {
+        if (isAbortError(retryException)) {
+          throw new Error(timeoutMessage(method));
+        }
         throw new Error("The portal cannot connect to the server right now. Please try again in a moment.");
       }
     } else {
@@ -755,6 +814,18 @@ export async function apiFetch<T>(
   }
 
   return JSON.parse(text) as T;
+  })();
+
+  if (!dedupeKey) {
+    return requestPromise;
+  }
+
+  inFlightGetRequests.set(dedupeKey, requestPromise);
+  try {
+    return await requestPromise;
+  } finally {
+    inFlightGetRequests.delete(dedupeKey);
+  }
 }
 
 export async function downloadFile(endpoint: string, fallbackFilename: string) {
@@ -768,8 +839,16 @@ export async function downloadFile(endpoint: string, fallbackFilename: string) {
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
-  } catch {
+    const timeout = withTimeoutSignal(null, DOWNLOAD_TIMEOUT_MS);
+    try {
+      response = await fetch(`${API_BASE_URL}${endpoint}`, { headers, signal: timeout.signal });
+    } finally {
+      timeout.cleanup();
+    }
+  } catch (exception) {
+    if (isAbortError(exception)) {
+      throw new Error("The download is taking longer than expected. Please try again when the connection is stable.");
+    }
     throw new Error("The report server is unavailable right now. Please try again in a moment.");
   }
   if (!response.ok) {
@@ -1389,6 +1468,39 @@ export function markAllNotificationsRead() {
 
 export function deleteNotification(id: number) {
   return apiFetch<void>(`/notifications/${id}`, { method: "DELETE" });
+}
+
+export function getWebPushVapidPublicKey() {
+  return apiFetch<{ publicKey: string }>("/push/vapid-public-key");
+}
+
+export function subscribeCurrentDeviceToPush(payload: PushSubscriptionPayload) {
+  return apiFetch<PushDevice>("/push/subscriptions", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function getPushNotificationDevices() {
+  return apiFetch<PushDevice[]>("/push/subscriptions");
+}
+
+export function removePushNotificationDevice(subscriptionId: number) {
+  return apiFetch<void>(`/push/subscriptions/${subscriptionId}`, { method: "DELETE" });
+}
+
+export function deactivateCurrentPushSubscription(payload: PushSubscriptionPayload) {
+  return apiFetch<void>("/push/subscriptions/deactivate-current", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function sendPushTestNotification(payload: PushSubscriptionPayload) {
+  return apiFetch<void>("/push/test", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
 }
 
 function toQuery(params: Record<string, string | number | boolean | undefined>) {

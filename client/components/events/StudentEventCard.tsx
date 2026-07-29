@@ -28,7 +28,7 @@ export default function StudentEventCard({ event, registered }: StudentEventCard
           <Badge variant={registrationState.badgeVariant}>{registrationState.label}</Badge>
         </div>
         <h2 className="mt-3 line-clamp-2 text-lg font-bold text-kec-text">{event.title}</h2>
-        <div className="mt-4 space-y-2 text-sm text-kec-secondary">
+        <div className="mt-4 space-y-2 break-words text-sm text-kec-secondary">
           <p><span className="font-semibold text-kec-text">Incharge:</span> {inchargeText}</p>
           <p><span className="font-semibold text-kec-text">Date:</span> {formatDate(event.startDatetime)}</p>
           <p><span className="font-semibold text-kec-text">Registration:</span> {formatDate(event.registrationStart)} to {formatDate(event.registrationEnd)}</p>
