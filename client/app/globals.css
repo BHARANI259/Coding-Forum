@@ -454,7 +454,7 @@ a {
 
 @media (max-width: 900px) {
   .landing-content {
-    justify-content: flex-start;
+    justify-content: center;
     padding-top: 28px;
     padding-bottom: 28px;
   }
@@ -475,18 +475,36 @@ a {
 }
 
 @media (max-width: 760px) {
+  .landing-content {
+    gap: clamp(12px, 2.4dvh, 18px);
+    padding: max(16px, var(--safe-area-top)) 16px max(16px, var(--safe-area-bottom));
+  }
+
+  .landing-logo {
+    height: clamp(50px, 14vw, 64px);
+    margin-bottom: 8px;
+  }
+
+  .landing-brand h1 {
+    margin-top: 4px;
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
   .landing-role-grid {
     max-width: 520px;
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .landing-role-card {
     aspect-ratio: auto;
-    min-height: 138px;
+    min-height: 112px;
     display: grid;
     grid-template-columns: auto 1fr;
     justify-items: start;
+    align-items: center;
     text-align: left;
+    padding: 14px;
   }
 
   .landing-role-icon {
@@ -503,6 +521,38 @@ a {
   .landing-role-subtitle {
     max-width: none;
     min-height: 0;
+    margin-top: 4px;
+    line-height: 1.35;
+  }
+
+  .landing-role-action {
+    margin-top: 8px;
+    padding: 7px 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .landing-content {
+    gap: 10px;
+  }
+
+  .landing-role-card {
+    min-height: 104px;
+    border-radius: 14px;
+  }
+
+  .landing-role-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .landing-role-subtitle {
+    font-size: 12px;
+  }
+
+  .landing-footer {
+    font-size: 12px;
   }
 }
 
