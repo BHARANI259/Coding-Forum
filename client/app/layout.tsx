@@ -4,6 +4,7 @@ import { NetworkStatusToast } from "../components/pwa/network-status-toast";
 import { PwaInstallProvider } from "../components/pwa/pwa-install-provider";
 import { PwaUpdateToast } from "../components/pwa/pwa-update-toast";
 import { ServiceWorkerRegister } from "../components/pwa/service-worker-register";
+import { ThemeProvider } from "../components/theme/theme-provider";
 import "./globals.css";
 
 const appDescription =
@@ -86,13 +87,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <PwaInstallProvider>
-          <ServiceWorkerRegister />
-          {children}
-          <IosInstallGuide />
-          <PwaUpdateToast />
-          <NetworkStatusToast />
-        </PwaInstallProvider>
+        <ThemeProvider>
+          <PwaInstallProvider>
+            <ServiceWorkerRegister />
+            {children}
+            <IosInstallGuide />
+            <PwaUpdateToast />
+            <NetworkStatusToast />
+          </PwaInstallProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

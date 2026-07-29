@@ -1,6 +1,7 @@
 import Breadcrumbs from "./Breadcrumbs";
 import NotificationButton from "@/components/notifications/NotificationButton";
 import { InstallAppButton } from "@/components/pwa/install-app-button";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 type TopbarProps = {
   title: string;
@@ -34,6 +35,7 @@ export default function Topbar({ title, onMenuClick }: TopbarProps) {
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <InstallAppButton compact className="hidden sm:inline-flex" />
+        <ThemeToggle className="hidden sm:inline-flex" />
         <NotificationButton />
         <div className="hidden max-w-[220px] truncate text-sm font-semibold text-kec-secondary sm:block">Kongu Engineering College</div>
       </div>

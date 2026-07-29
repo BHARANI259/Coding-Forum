@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import RoleBadge from "@/components/ui/RoleBadge";
 import Button from "@/components/ui/Button";
 import { InstallAppButton } from "@/components/pwa/install-app-button";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 type SidebarProps = {
   user: CurrentUser;
@@ -69,6 +70,9 @@ export default function Sidebar({ user, onLogout, onNavigate }: SidebarProps) {
         >
           Logout
         </Button>
+        <div className="mt-3 flex justify-center">
+          <ThemeToggle className="border-white/15 bg-white/10 text-white hover:bg-white/15" />
+        </div>
         <InstallAppButton className="mt-3 w-full border-white/15 bg-white/10 text-white hover:bg-white/15" />
       </div>
     </aside>
