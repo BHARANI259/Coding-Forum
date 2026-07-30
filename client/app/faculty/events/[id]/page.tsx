@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
@@ -21,8 +22,6 @@ import {
   getFacultyEventRegistrations,
   getFacultyProblemStatements,
   getFacultyRounds,
-  publishFacultyFinalResult,
-  publishFacultyRoundResult,
   updateFacultyRoundStatus,
   type EventDetail,
   type EventRegistration,
@@ -37,7 +36,6 @@ export default function FacultyEventDetailPage() {
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [rounds, setRounds] = useState<EventRound[]>([]);
   const [reportDownloading, setReportDownloading] = useState("");
-  const [publishingRoundId, setPublishingRoundId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -78,26 +76,6 @@ export default function FacultyEventDetailPage() {
       setError(exception instanceof Error ? exception.message : "Unable to download report.");
     } finally {
       setReportDownloading("");
-    }
-  }
-
-  async function publishRound(round: EventRound) {
-    setError("");
-    setSuccess("");
-    setPublishingRoundId(round.id);
-    try {
-      if (round.finalRound) {
-        await publishFacultyFinalResult(Number(params.id), round.id);
-        setSuccess("Final results have been published. Event is completed. Editing is disabled.");
-      } else {
-        await publishFacultyRoundResult(Number(params.id), round.id);
-        setSuccess("This round result has been published. Editing is disabled.");
-      }
-      await load();
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Unable to publish round result.");
-    } finally {
-      setPublishingRoundId(null);
     }
   }
 
@@ -169,7 +147,7 @@ export default function FacultyEventDetailPage() {
           </Card>
           <Card>
             <h2 className="text-base font-bold text-kec-text">Rounds</h2>
-            <p className="mt-2 text-sm text-kec-secondary">Rounds are configured by the SuperAdmin. Publish each round result from the matching row.</p>
+            <p className="mt-2 text-sm text-kec-secondary">Rounds are configured by the SuperAdmin. Open the result page from the matching row to enter marks, update progress, or publish the round result.</p>
             <div className="mt-4">
               <DataTable
                 headers={["Order", "Round", "Final", "Status", "Result Published", "Published At", "Publish"]}
@@ -183,9 +161,11 @@ export default function FacultyEventDetailPage() {
                   <div key="actions" className="flex flex-wrap gap-2">
                     {round.status === "NOT_STARTED" && eventActive ? <Button type="button" className="w-full sm:w-auto" variant="secondary" onClick={() => void handleRoundStatus(round.id, "ONGOING")}>Start Round</Button> : null}
                     {round.status === "ONGOING" && eventActive ? (
-                      <Button type="button" className="w-full sm:w-auto" loading={publishingRoundId === round.id} onClick={() => void publishRound(round)}>
-                        {round.finalRound ? "Publish Final Result" : "Publish Round Result"}
-                      </Button>
+                      <Link className="w-full sm:w-auto" href={`/faculty/events/${params.id}/results?roundId=${round.id}`}>
+                        <Button type="button" className="w-full sm:w-auto">
+                          {round.finalRound ? "Publish Final Result" : "Publish Round Result"}
+                        </Button>
+                      </Link>
                     ) : null}
                     {round.resultPublished ? <span className="text-xs font-semibold text-green-700">Locked</span> : null}
                     {!eventActive && !round.resultPublished ? <span className="text-xs text-kec-muted">Unavailable</span> : null}

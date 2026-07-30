@@ -1,10 +1,12 @@
 package com.kec.codingforum.event;
 
 import com.kec.codingforum.event.dto.RoundResultDto;
+import com.kec.codingforum.notification.NotificationService;
 import com.kec.codingforum.registration.RegistrationRepository;
 import com.kec.codingforum.registration.Registration;
 import com.kec.codingforum.result.ResultService;
 import com.kec.codingforum.team.Team;
+import com.kec.codingforum.team.TeamMemberRepository;
 import com.kec.codingforum.team.TeamRepository;
 import com.kec.codingforum.user.Student;
 import com.kec.codingforum.user.StudentRepository;
@@ -46,6 +48,8 @@ public class EventRoundResultService {
     private final UserRepository users;
     private final RegistrationRepository registrations;
     private final ResultService resultService;
+    private final TeamMemberRepository teamMembers;
+    private final NotificationService notificationService;
 
     public EventRoundResultService(
             EventRoundResultRepository roundResults,
@@ -55,7 +59,9 @@ public class EventRoundResultService {
             StudentRepository students,
             UserRepository users,
             RegistrationRepository registrations,
-            ResultService resultService
+            ResultService resultService,
+            TeamMemberRepository teamMembers,
+            NotificationService notificationService
     ) {
         this.roundResults = roundResults;
         this.rounds = rounds;
@@ -65,6 +71,8 @@ public class EventRoundResultService {
         this.users = users;
         this.registrations = registrations;
         this.resultService = resultService;
+        this.teamMembers = teamMembers;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -150,6 +158,7 @@ public class EventRoundResultService {
             publishStudentShortlist(event, round, userId);
         }
         markRoundPublished(round, userId);
+        notifyRoundProgress(event, round);
     }
 
     @Transactional
@@ -178,6 +187,7 @@ public class EventRoundResultService {
             }
         }
         markRoundPublished(round, userId);
+        notifyRoundProgress(event, round);
         resultService.publishResults(eventId);
     }
 
@@ -380,6 +390,57 @@ public class EventRoundResultService {
         round.setResultPublishedAt(LocalDateTime.now());
         round.setPublishedBy(user);
         round.setUpdatedAt(LocalDateTime.now());
+    }
+
+    private void notifyRoundProgress(Event event, EventRound round) {
+        List<EventRoundResult> publishedRows = roundResults.findByEventIdAndRoundIdOrderByDeclaredAtDesc(event.getId(), round.getId());
+        for (EventRoundResult result : publishedRows) {
+            if (result.getTeam() != null) {
+                List<Long> studentIds = teamMembers.findByTeamIdOrderByJoinedAtAsc(result.getTeam().getId()).stream()
+                        .map(member -> member.getStudent().getId())
+                        .distinct()
+                        .toList();
+                List<Long> userIds = users.findByStudentIdIn(studentIds).stream().map(User::getId).toList();
+                notificationService.notifyUsers(
+                        userIds,
+                        round.isFinalRound() ? "Final result published" : "Round result published",
+                        teamProgressMessage(event, round, result),
+                        "RESULT_PUBLISHED",
+                        "EVENT",
+                        event.getId()
+                );
+            } else if (result.getStudent() != null) {
+                users.findByStudentId(result.getStudent().getId()).ifPresent(user -> notificationService.notifyUsers(
+                        List.of(user.getId()),
+                        round.isFinalRound() ? "Final result published" : "Round result published",
+                        studentProgressMessage(event, round, result),
+                        "RESULT_PUBLISHED",
+                        "EVENT",
+                        event.getId()
+                ));
+            }
+        }
+    }
+
+    private String studentProgressMessage(Event event, EventRound round, EventRoundResult result) {
+        return round.getRoundName() + " result for " + event.getTitle() + " is published. Your progress: " + progressText(result.getStatus(), round.isFinalRound()) + ".";
+    }
+
+    private String teamProgressMessage(Event event, EventRound round, EventRoundResult result) {
+        return round.getRoundName() + " result for " + event.getTitle() + " is published. Team " + result.getTeam().getTeamName() + " progress: " + progressText(result.getStatus(), round.isFinalRound()) + ".";
+    }
+
+    private String progressText(String status, boolean finalRound) {
+        return switch (status == null ? "" : status) {
+            case "QUALIFIED" -> "Qualified for the next round";
+            case "DISQUALIFIED" -> "Disqualified in this round";
+            case "NOT_PRESENTED" -> "Marked as not presented";
+            case "WINNER" -> "Winner";
+            case "RUNNER_UP" -> "Runner up";
+            case "SECOND_RUNNER_UP" -> "Second runner up";
+            case "PARTICIPANT" -> finalRound ? "Participant in the final result" : "Participant";
+            default -> "Result updated";
+        };
     }
 
     private EventRound findRound(Long eventId, Long roundId) {

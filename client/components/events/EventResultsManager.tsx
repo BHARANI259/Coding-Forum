@@ -45,9 +45,10 @@ const roundShortlistStatuses = ["QUALIFIED", "DISQUALIFIED", "NOT_PRESENTED"];
 type EventResultsManagerProps = {
   eventId: number;
   mode: "admin" | "faculty";
+  initialRoundId?: number;
 };
 
-export default function EventResultsManager({ eventId, mode }: EventResultsManagerProps) {
+export default function EventResultsManager({ eventId, mode, initialRoundId }: EventResultsManagerProps) {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [rounds, setRounds] = useState<EventRound[]>([]);
   const [selectedRoundId, setSelectedRoundId] = useState("");
@@ -73,7 +74,10 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
         setRegistrations(eventRegistrations);
         setSummary(results);
         setRounds(roundList);
-        setSelectedRoundId((current) => current || (roundList[0] ? String(roundList[0].id) : ""));
+        const preferredRoundId = initialRoundId && roundList.some((round) => round.id === initialRoundId)
+          ? String(initialRoundId)
+          : (roundList[0] ? String(roundList[0].id) : "");
+        setSelectedRoundId((current) => current || preferredRoundId);
       } catch (exception) {
         setError(exception instanceof Error ? exception.message : "Unable to load results.");
       } finally {
@@ -81,7 +85,7 @@ export default function EventResultsManager({ eventId, mode }: EventResultsManag
       }
     }
     void load();
-  }, [eventId, mode]);
+  }, [eventId, initialRoundId, mode]);
 
   const selectedRound = useMemo(() => rounds.find((round) => String(round.id) === selectedRoundId) ?? null, [rounds, selectedRoundId]);
   const eventClosed = Boolean(event && (event.resultsPublished || event.status === "COMPLETED" || event.status === "CANCELLED"));

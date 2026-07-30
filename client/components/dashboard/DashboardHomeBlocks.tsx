@@ -40,7 +40,7 @@ type WelcomeCardProps = {
 export function DashboardWelcomeCard({ roleLabel, name, email, href, summary }: WelcomeCardProps) {
   return (
     <Link href={href} className="block focus:outline-none focus:ring-4 focus:ring-kec-purple/20">
-      <Card className="group overflow-hidden border-white/60 bg-gradient-to-br from-white/75 via-white/55 to-kec-purple/10 p-0 shadow-lg shadow-slate-200/70 backdrop-blur-xl">
+      <Card className="group overflow-hidden border-white/60 bg-gradient-to-br from-white/75 via-white/55 to-kec-purple/10 p-0 shadow-lg shadow-slate-200/70 backdrop-blur-xl dark:border-slate-700/80 dark:from-slate-950/95 dark:via-slate-900/90 dark:to-kec-purple/25 dark:shadow-black/30">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-white/70 bg-kec-purple text-2xl font-black text-white shadow-lg shadow-kec-purple/20 sm:h-24 sm:w-24">
@@ -53,7 +53,7 @@ export function DashboardWelcomeCard({ roleLabel, name, email, href, summary }: 
               {summary ? <p className="mt-2 text-sm text-kec-muted">{summary}</p> : null}
             </div>
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-kec-border bg-white/60 text-kec-purple transition group-hover:translate-x-1">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-kec-border bg-white/60 text-kec-purple transition group-hover:translate-x-1 dark:border-slate-700 dark:bg-slate-800/80 dark:text-purple-200">
             <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 18l6-6-6-6" />
             </svg>
@@ -66,7 +66,7 @@ export function DashboardWelcomeCard({ roleLabel, name, email, href, summary }: 
 
 export function DashboardQuickAccess({ title, subtitle, tiles }: { title: string; subtitle?: string; tiles: DashboardTile[] }) {
   return (
-    <Card className="bg-white/75 backdrop-blur-xl">
+    <Card className="bg-white/75 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/85 dark:shadow-black/25">
       <div className="mb-5">
         <h2 className="text-xl font-black text-kec-text">{title}</h2>
         {subtitle ? <p className="mt-1 text-sm text-kec-secondary">{subtitle}</p> : null}
@@ -76,12 +76,12 @@ export function DashboardQuickAccess({ title, subtitle, tiles }: { title: string
           <Link
             key={`${tile.href}-${tile.title}`}
             href={tile.href}
-            className="group relative flex min-h-32 flex-col items-center justify-center rounded-2xl border border-kec-border bg-white/60 px-3 py-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-kec-purple/40 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-kec-purple/20"
+            className="group relative flex min-h-32 flex-col items-center justify-center rounded-2xl border border-kec-border bg-white/60 px-3 py-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-kec-purple/40 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-kec-purple/20 dark:border-slate-700/80 dark:bg-slate-800/70 dark:hover:border-purple-300/50"
           >
             {tile.badge !== undefined && Number(tile.badge) > 0 ? (
               <span className="absolute right-2 top-2 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">{tile.badge}</span>
             ) : null}
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-kec-purple/10 text-kec-purple transition group-hover:bg-kec-purple group-hover:text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-kec-purple/10 text-kec-purple transition group-hover:bg-kec-purple group-hover:text-white dark:bg-kec-purple/20 dark:text-purple-200">
               <DashboardIcon name={tile.icon} />
             </div>
             <p className="mt-3 line-clamp-2 text-sm font-bold text-kec-text">{tile.title}</p>
@@ -97,7 +97,7 @@ export function DashboardMetricStrip({ items }: { items: Array<{ label: string; 
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {items.map((item) => (
-        <Card key={item.label} className="bg-white/75 backdrop-blur-xl">
+        <Card key={item.label} className="bg-white/75 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/85 dark:shadow-black/25">
           <p className="text-sm font-semibold text-kec-secondary">{item.label}</p>
           <p className="mt-3 text-3xl font-black text-kec-text">{item.value}</p>
           {item.hint ? <p className="mt-1 text-xs text-kec-muted">{item.hint}</p> : null}
@@ -121,7 +121,7 @@ export function DashboardActionPanel({
   actionLabel?: string;
 }) {
   return (
-    <Card className="bg-white/75 backdrop-blur-xl">
+    <Card className="bg-white/75 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/85 dark:shadow-black/25">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-black text-kec-text">{title}</h2>
@@ -140,7 +140,7 @@ export function DashboardActionPanel({
 
 export function InlineActionCard({ title, description, href, action }: { title: string; description: string; href: string; action: string }) {
   return (
-    <div className="rounded-2xl border border-kec-border bg-white/60 p-4">
+    <div className="rounded-2xl border border-kec-border bg-white/60 p-4 dark:border-slate-700/80 dark:bg-slate-800/70">
       <h3 className="text-base font-black text-kec-text">{title}</h3>
       <p className="mt-2 text-sm text-kec-secondary">{description}</p>
       <Link className="mt-4 block" href={href}>
