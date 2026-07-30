@@ -30,6 +30,12 @@ spring:
           auth: true
           starttls:
             enable: true
+            required: true
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT:10000}
+          timeout: ${MAIL_TIMEOUT:10000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT:10000}
+          ssl:
+            trust: ${MAIL_SSL_TRUST:smtp.gmail.com}
 
 server:
   port: ${PORT:8080}
@@ -49,6 +55,7 @@ app:
     email-enabled: ${NOTIFICATION_EMAIL_ENABLED:false}
     websocket-enabled: ${NOTIFICATION_WEBSOCKET_ENABLED:true}
     from-name: ${NOTIFICATION_FROM_NAME:KEC Coding Forum}
+    from-address: ${NOTIFICATION_FROM_ADDRESS:}
   web-push:
     enabled: ${WEB_PUSH_ENABLED:false}
     vapid-public-key: ${WEB_PUSH_VAPID_PUBLIC_KEY:}

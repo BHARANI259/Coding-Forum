@@ -47,10 +47,15 @@ EVENT_MEDIA_DIR
 NOTIFICATION_EMAIL_ENABLED
 NOTIFICATION_WEBSOCKET_ENABLED
 NOTIFICATION_FROM_NAME
+NOTIFICATION_FROM_ADDRESS
 MAIL_HOST
 MAIL_PORT
 MAIL_USERNAME
 MAIL_PASSWORD
+MAIL_CONNECTION_TIMEOUT
+MAIL_TIMEOUT
+MAIL_WRITE_TIMEOUT
+MAIL_SSL_TRUST
 CSP_REPORT_ONLY
 RATE_LIMIT_ENABLED
 RATE_LIMIT_LOGIN_MAX_ATTEMPTS
@@ -81,6 +86,32 @@ APP_TIME_ZONE=Asia/Kolkata
 ```
 
 If `JDBC_DATABASE_URL` is set, it overrides the composed local URL built from `DB_HOST`, `DB_PORT`, and `DB_NAME`.
+
+### SMTP Email
+
+Email delivery is disabled by default. To enable SMTP notification email delivery:
+
+```text
+NOTIFICATION_EMAIL_ENABLED=true
+NOTIFICATION_FROM_NAME=KEC Coding Forum
+NOTIFICATION_FROM_ADDRESS=keccodingforum@kongu.edu
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=keccodingforum@kongu.edu
+MAIL_PASSWORD=your-smtp-or-gmail-app-password
+MAIL_SSL_TRUST=smtp.gmail.com
+```
+
+For Gmail, create a Google app password and use that value for `MAIL_PASSWORD`; normal account passwords usually fail.
+
+After deployment, login as SuperAdmin and test SMTP:
+
+```powershell
+curl -X POST https://your-backend-domain/api/admin/mail/test `
+  -H "Authorization: Bearer <SUPER_ADMIN_JWT>" `
+  -H "Content-Type: application/json" `
+  -d "{\"to\":\"recipient@example.com\"}"
+```
 
 ### Upload Storage
 

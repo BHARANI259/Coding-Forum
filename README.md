@@ -177,6 +177,36 @@ MAIL_HOST
 MAIL_PORT
 MAIL_USERNAME
 MAIL_PASSWORD
+MAIL_CONNECTION_TIMEOUT
+MAIL_TIMEOUT
+MAIL_WRITE_TIMEOUT
+MAIL_SSL_TRUST
+```
+
+### SMTP Email Sending
+
+SMTP email is used by notification delivery when enabled. In-app notifications are still created even if SMTP is disabled or fails.
+
+For Gmail SMTP, use an app password instead of your normal Gmail password:
+
+```text
+NOTIFICATION_EMAIL_ENABLED=true
+NOTIFICATION_FROM_NAME=KEC Coding Forum
+NOTIFICATION_FROM_ADDRESS=keccodingforum@kongu.edu
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=keccodingforum@kongu.edu
+MAIL_PASSWORD=your-gmail-app-password
+MAIL_SSL_TRUST=smtp.gmail.com
+```
+
+SuperAdmin can test SMTP after login:
+
+```powershell
+curl -X POST http://localhost:8080/api/admin/mail/test `
+  -H "Authorization: Bearer <SUPER_ADMIN_JWT>" `
+  -H "Content-Type: application/json" `
+  -d "{\"to\":\"recipient@example.com\"}"
 ```
 
 ## Frontend Setup
