@@ -63,9 +63,15 @@ public class PushSubscriptionController {
     @PostMapping("/test")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void sendTestNotification(@Valid @RequestBody PushSubscriptionRequest request) {
+        if (!webPushService.isConfigured()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Push notifications are not configured. Set WEB_PUSH_ENABLED=true and provide valid VAPID keys."
+            );
+        }
         PushSubscription subscription = subscriptionService.activeCurrentUserSubscription(request)
                 .orElseThrow(() -> new IllegalArgumentException("Current device is not subscribed to push notifications."));
-        webPushService.sendToSubscription(
+        WebPushService.PushSendResult result = webPushService.sendToSubscription(
                 subscription,
                 new WebPushPayload(
                         null,
@@ -75,5 +81,8 @@ public class PushSubscriptionController {
                         "/notifications"
                 )
         );
+        if (!result.success()) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, result.message());
+        }
     }
 }

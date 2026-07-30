@@ -87,18 +87,28 @@ public class PushSubscriptionService {
 
     @Transactional
     public void markSuccess(PushSubscription subscription) {
-        subscription.setFailureCount(0);
-        subscription.setLastSuccessAt(LocalDateTime.now());
-        subscription.setUpdatedAt(LocalDateTime.now());
+        if (subscription == null || subscription.getId() == null) {
+            return;
+        }
+        subscriptions.findById(subscription.getId()).ifPresent(current -> {
+            current.setFailureCount(0);
+            current.setLastSuccessAt(LocalDateTime.now());
+            current.setUpdatedAt(LocalDateTime.now());
+        });
     }
 
     @Transactional
     public void markFailure(PushSubscription subscription, boolean expired) {
-        subscription.setFailureCount(subscription.getFailureCount() + 1);
-        subscription.setUpdatedAt(LocalDateTime.now());
-        if (expired || subscription.getFailureCount() >= 5) {
-            deactivate(subscription);
+        if (subscription == null || subscription.getId() == null) {
+            return;
         }
+        subscriptions.findById(subscription.getId()).ifPresent(current -> {
+            current.setFailureCount(current.getFailureCount() + 1);
+            current.setUpdatedAt(LocalDateTime.now());
+            if (expired || current.getFailureCount() >= 5) {
+                deactivate(current);
+            }
+        });
     }
 
     @Transactional(readOnly = true)
