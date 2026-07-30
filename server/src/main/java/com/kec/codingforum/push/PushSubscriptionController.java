@@ -7,6 +7,7 @@ import com.kec.codingforum.security.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,7 +29,13 @@ public class PushSubscriptionController {
 
     @GetMapping("/vapid-public-key")
     public VapidPublicKeyResponse publicKey() {
-        return new VapidPublicKeyResponse(webPushService.publicKey());
+        if (!webPushService.isConfigured()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Push notifications are not configured. Set WEB_PUSH_ENABLED=true and provide WEB_PUSH_VAPID_PUBLIC_KEY and WEB_PUSH_VAPID_PRIVATE_KEY."
+            );
+        }
+        return new VapidPublicKeyResponse(webPushService.publicKey(), true);
     }
 
     @PostMapping("/subscriptions")

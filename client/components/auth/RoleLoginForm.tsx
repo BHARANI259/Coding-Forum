@@ -30,6 +30,11 @@ export default function RoleLoginForm({
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [exiting, setExiting] = useState(false);
+  const emailPlaceholder = roleLabel === "STUDENT"
+    ? "student@kongu.edu"
+    : roleLabel === "FACULTY"
+      ? "faculty@kongu.edu"
+      : "keccodingforum@kongu.edu";
 
   function redirectWithFade(path: string) {
     setExiting(true);
@@ -87,6 +92,7 @@ export default function RoleLoginForm({
               label="Email"
               id="email"
               type="email"
+              placeholder={emailPlaceholder}
               autoComplete="email"
               required
               value={email}
@@ -97,6 +103,7 @@ export default function RoleLoginForm({
               label="Password"
               id="password"
               type="password"
+              placeholder="Enter your password"
               autoComplete="current-password"
               required
               value={password}

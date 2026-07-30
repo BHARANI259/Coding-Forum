@@ -74,6 +74,7 @@ export default function ChangePasswordPage() {
                 label="Current Password"
                 id="oldPassword"
                 type="password"
+                placeholder="Enter your current password"
                 autoComplete="current-password"
                 required
                 value={oldPassword}
@@ -84,6 +85,7 @@ export default function ChangePasswordPage() {
                 label="New Password"
                 id="newPassword"
                 type="password"
+                placeholder="Create a new password"
                 autoComplete="new-password"
                 required
                 minLength={8}
@@ -95,6 +97,7 @@ export default function ChangePasswordPage() {
                 label="Confirm New Password"
                 id="confirmPassword"
                 type="password"
+                placeholder="Re-enter the new password"
                 autoComplete="new-password"
                 required
                 minLength={8}

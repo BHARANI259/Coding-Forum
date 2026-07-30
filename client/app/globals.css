@@ -85,9 +85,12 @@ body {
 .dark input,
 .dark select,
 .dark textarea {
-  border-color: #334155 !important;
-  background-color: #111827 !important;
+  border-color: rgba(148, 163, 184, 0.32) !important;
+  background-color: rgba(15, 23, 42, 0.58) !important;
   color: #f3f4f6 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 26px rgba(0, 0, 0, 0.22) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .dark input::placeholder,
@@ -139,6 +142,16 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+input,
+select,
+textarea {
+  background-color: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 8px 24px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 a {

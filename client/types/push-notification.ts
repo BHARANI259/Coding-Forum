@@ -5,6 +5,7 @@ export type PushSubscriptionStatus =
   | "insecure-context"
   | "permission-required"
   | "permission-denied"
+  | "not-configured"
   | "subscribed"
   | "unsubscribed"
   | "error";

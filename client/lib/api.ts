@@ -1471,7 +1471,7 @@ export function deleteNotification(id: number) {
 }
 
 export function getWebPushVapidPublicKey() {
-  return apiFetch<{ publicKey: string }>("/push/vapid-public-key");
+  return apiFetch<{ publicKey: string; enabled?: boolean }>("/push/vapid-public-key");
 }
 
 export function subscribeCurrentDeviceToPush(payload: PushSubscriptionPayload) {

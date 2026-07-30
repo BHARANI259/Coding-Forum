@@ -18,7 +18,7 @@ export default function Select({ label, error, helperText, id, className, childr
       <select
         id={selectId}
         className={cn(
-          "mt-2 min-h-10 w-full min-w-0 rounded-lg border border-kec-border bg-white px-3 py-2.5 text-base text-kec-text outline-none transition focus:border-kec-purple focus:ring-4 focus:ring-kec-purple/15 sm:text-sm",
+          "mt-2 min-h-10 w-full min-w-0 rounded-lg border border-white/60 bg-white/55 px-3 py-2.5 text-base text-kec-text shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_24px_rgba(15,23,42,0.06)] outline-none backdrop-blur-md transition focus:border-kec-purple/70 focus:bg-white/75 focus:ring-4 focus:ring-kec-purple/15 disabled:cursor-not-allowed disabled:bg-white/35 disabled:text-kec-muted sm:text-sm",
           error && "border-red-300 focus:border-red-500 focus:ring-red-500/15",
           className
         )}

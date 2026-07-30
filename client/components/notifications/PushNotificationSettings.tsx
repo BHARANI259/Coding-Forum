@@ -91,15 +91,16 @@ export default function PushNotificationSettings() {
 
       let subscription = await currentBrowserSubscription();
       if (!subscription) {
-        const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY || (await getWebPushVapidPublicKey()).publicKey;
+        const publicKey = await resolveWebPushPublicKey();
         subscription = await createBrowserSubscription(publicKey);
       }
       await subscribeCurrentDeviceToPush(subscriptionToPayload(subscription));
       setMessage("Push notifications are enabled on this device.");
       await loadDevices();
     } catch (exception) {
-      setStatus("error");
-      setError(exception instanceof Error ? exception.message : "Unable to enable push notifications.");
+      const message = exception instanceof Error ? exception.message : "Unable to enable push notifications.";
+      setStatus(message.toLowerCase().includes("not configured") || message.toLowerCase().includes("public key") ? "not-configured" : "error");
+      setError(message);
     } finally {
       setBusy(false);
     }
@@ -177,7 +178,7 @@ export default function PushNotificationSettings() {
             <Button
               type="button"
               loading={busy}
-              disabled={status === "unsupported" || status === "insecure-context" || status === "permission-denied"}
+              disabled={status === "unsupported" || status === "insecure-context" || status === "permission-denied" || status === "not-configured"}
               onClick={() => void enableNotifications()}
             >
               Enable notifications
@@ -229,6 +230,8 @@ function statusMessage(status: PushSubscriptionStatus) {
       return "Click Enable notifications when you are ready. The browser permission prompt will appear only after that click.";
     case "permission-denied":
       return "Notifications are blocked in your browser. Change site permissions to enable them again.";
+    case "not-configured":
+      return "Push notifications are not configured on the server yet. In-app notifications still work.";
     case "insecure-context":
       return "Push notifications require HTTPS in production. Localhost is allowed for development.";
     case "unsubscribed":
@@ -238,4 +241,18 @@ function statusMessage(status: PushSubscriptionStatus) {
     default:
       return "This browser does not support standard Web Push notifications.";
   }
+}
+
+async function resolveWebPushPublicKey() {
+  const envKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.trim();
+  if (envKey) {
+    return envKey;
+  }
+
+  const response = await getWebPushVapidPublicKey();
+  const serverKey = response.publicKey?.trim();
+  if (!serverKey) {
+    throw new Error("Push notifications are not configured. Add the Web Push VAPID keys in the backend environment.");
+  }
+  return serverKey;
 }

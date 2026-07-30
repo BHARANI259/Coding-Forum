@@ -14,6 +14,10 @@ export function isPushSecureContext() {
   return typeof window !== "undefined" && window.isSecureContext;
 }
 
+function pushSetupErrorMessage() {
+  return "Push notifications are not ready in this browser yet. In local development, run a production build so the service worker can register.";
+}
+
 export function urlBase64ToUint8Array(value: string) {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -29,11 +33,23 @@ export function urlBase64ToUint8Array(value: string) {
   return output;
 }
 
+async function serviceWorkerReady() {
+  if (!isPushSupported()) {
+    throw new Error("This browser does not support standard Web Push notifications.");
+  }
+  return Promise.race<ServiceWorkerRegistration>([
+    navigator.serviceWorker.ready,
+    new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error(pushSetupErrorMessage())), 6000);
+    })
+  ]);
+}
+
 export async function currentBrowserSubscription() {
   if (!isPushSupported()) {
     return null;
   }
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await serviceWorkerReady();
   return registration.pushManager.getSubscription();
 }
 
@@ -59,11 +75,18 @@ export function subscriptionToPayload(subscription: PushSubscription): PushSubsc
 }
 
 export async function createBrowserSubscription(publicKey: string) {
-  const registration = await navigator.serviceWorker.ready;
-  return registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(publicKey)
-  });
+  const registration = await serviceWorkerReady();
+  try {
+    return await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+  } catch (exception) {
+    if (exception instanceof Error && exception.message === "Web Push public key is missing.") {
+      throw exception;
+    }
+    throw new Error("Unable to create the browser push subscription. Check that the Web Push public key is valid.");
+  }
 }
 
 function deviceName() {

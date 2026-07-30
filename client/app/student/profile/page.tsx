@@ -156,9 +156,9 @@ export default function StudentProfilePage() {
       {activeTab === "security" ? <Card className="mb-6">
         <h2 className="text-lg font-bold text-kec-text">Change Password</h2>
         <form className="mt-4 grid gap-4 sm:grid-cols-3" onSubmit={handlePasswordChange}>
-          <Input label="Current Password" type="password" autoComplete="current-password" value={passwordForm.oldPassword} onChange={(event) => setPasswordForm({ ...passwordForm, oldPassword: event.target.value })} required />
-          <Input label="New Password" type="password" autoComplete="new-password" value={passwordForm.newPassword} onChange={(event) => setPasswordForm({ ...passwordForm, newPassword: event.target.value })} required />
-          <Input label="Confirm Password" type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })} required />
+          <Input label="Current Password" type="password" placeholder="Enter current password" autoComplete="current-password" value={passwordForm.oldPassword} onChange={(event) => setPasswordForm({ ...passwordForm, oldPassword: event.target.value })} required />
+          <Input label="New Password" type="password" placeholder="Enter new password" autoComplete="new-password" value={passwordForm.newPassword} onChange={(event) => setPasswordForm({ ...passwordForm, newPassword: event.target.value })} required />
+          <Input label="Confirm Password" type="password" placeholder="Confirm new password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })} required />
           <div className="sm:col-span-3">
             <Button type="submit" loading={passwordSaving}>Change Password</Button>
           </div>

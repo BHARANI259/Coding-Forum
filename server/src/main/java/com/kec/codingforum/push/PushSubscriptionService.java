@@ -127,10 +127,17 @@ public class PushSubscriptionService {
     }
 
     private void validate(PushSubscriptionRequest request) {
+        if (request == null || request.endpoint() == null || request.endpoint().isBlank()) {
+            throw new IllegalArgumentException("Push endpoint is required.");
+        }
         if (!request.endpoint().startsWith("https://")) {
             throw new IllegalArgumentException("Push endpoint must be HTTPS.");
         }
-        if (request.keys() == null || request.keys().p256dh().isBlank() || request.keys().auth().isBlank()) {
+        if (request.keys() == null
+                || request.keys().p256dh() == null
+                || request.keys().p256dh().isBlank()
+                || request.keys().auth() == null
+                || request.keys().auth().isBlank()) {
             throw new IllegalArgumentException("Push subscription keys are required.");
         }
     }

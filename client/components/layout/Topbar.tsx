@@ -37,7 +37,7 @@ export default function Topbar({ title, onMenuClick }: TopbarProps) {
         <InstallAppButton compact className="hidden sm:inline-flex" />
         <ThemeToggle className="hidden sm:inline-flex" />
         <NotificationButton />
-        <div className="hidden max-w-[220px] truncate text-sm font-semibold text-kec-secondary sm:block">Kongu Engineering College</div>
+        <div className="hidden max-w-[220px] truncate text-sm font-semibold text-white/90 sm:block lg:text-slate-600">Kongu Engineering College</div>
       </div>
     </header>
   );
