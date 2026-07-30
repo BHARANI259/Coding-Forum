@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
 import DataTable from "@/components/ui/DataTable";
-import PageHeader from "@/components/ui/PageHeader";
-import StatCard from "@/components/ui/StatCard";
+import {
+  DashboardActionPanel,
+  DashboardMetricStrip,
+  DashboardQuickAccess,
+  DashboardWelcomeCard,
+  InlineActionCard,
+  type DashboardTile
+} from "@/components/dashboard/DashboardHomeBlocks";
 import { getMyPointHistory, getMyRegistrations, getMyStatistics, getMyTeams, getStudentEvents, getUnreadNotificationCount, type EventItem, type MyRegistration, type StudentPointHistory, type StudentStatistics, type TeamDetail } from "@/lib/api";
+import { getCurrentUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/dateFormat";
 
 export default function StudentDashboardShell() {
@@ -45,46 +49,65 @@ export default function StudentDashboardShell() {
   const registeredEventIds = new Set(registrations.filter((item) => item.status === "REGISTERED").map((item) => item.eventId));
   const openEvent = events.find((item) => item.status === "PUBLISHED" && item.registrationOpen && !registeredEventIds.has(item.id));
   const incompleteTeam = teams.find((item) => !item.lockedAfterRegistration && item.members.length < (item.event.minTeamSize ?? 1));
+  const user = getCurrentUser();
+  const quickAccess: DashboardTile[] = [
+    { title: "Events", description: "Browse and register", href: "/student/events", icon: "calendar" },
+    { title: "My Registrations", description: "Your enrolled events", href: "/student/registrations", icon: "document" },
+    { title: "My Teams", description: "Team codes and members", href: "/student/teams", icon: "group" },
+    { title: "Results", description: "Rounds and points", href: "/student/results", icon: "results" },
+    { title: "Leaderboard", description: "Rankings", href: "/student/leaderboard", icon: "leaderboard" },
+    { title: "Notifications", description: "Forum updates", href: "/student/notifications", icon: "notification", badge: unreadCount },
+    { title: "Profile", description: "Personal details", href: "/student/profile", icon: "profile" }
+  ];
 
   return (
     <AppShell expectedRole="STUDENT" title="Student Dashboard">
-      <PageHeader
-        title="Student Dashboard"
-        subtitle="Overview of your coding forum activity."
-      />
-      {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="Total Points" value={stats?.totalPoints ?? 0} hint="From declared results" />
-        <StatCard label="Events Participated" value={stats?.totalEventsRegistered ?? 0} hint="Registered events" />
-        <StatCard label="Wins" value={stats?.winsCount ?? 0} hint="Winner tags" />
-        <StatCard label="Runner-ups" value={stats?.runnerUpCount ?? 0} hint="Runner-up tags" />
-        <StatCard label="Participation Count" value={stats?.participationCount ?? 0} hint="Participation points" />
+      <div className="space-y-6">
+      <div>
+        <p className="text-sm font-bold uppercase tracking-wide text-kec-purple">Home</p>
+        <h1 className="mt-1 text-3xl font-black text-kec-text">Student Dashboard</h1>
+        <p className="mt-1 text-sm text-kec-secondary">Your coding forum activity, registrations, teams, and points in one place.</p>
       </div>
-      <section className="mt-6 space-y-3">
-        <div>
-          <h2 className="text-lg font-bold text-kec-text">Your Next Actions</h2>
-          <p className="text-sm text-kec-secondary">The most useful things to check now.</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <ActionCard
+      {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+
+      <DashboardWelcomeCard
+        roleLabel="Student"
+        name={user?.name ?? "Student"}
+        email={user?.email ?? ""}
+        href="/student/profile"
+        summary={`${stats?.totalPoints ?? 0} points earned across ${stats?.totalEventsRegistered ?? 0} registered event${(stats?.totalEventsRegistered ?? 0) === 1 ? "" : "s"}.`}
+      />
+
+      <DashboardQuickAccess title="Quick Access" subtitle="Open the most-used student sections quickly." tiles={quickAccess} />
+
+      <DashboardActionPanel title="Applications & Registrations" subtitle="Current actions that may need your attention.">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <InlineActionCard
             title={openEvent ? "Registration Available" : "Event Registration"}
             description={openEvent ? `${openEvent.title} is open for registration.` : "No new eligible event is open right now."}
             href={openEvent ? `/student/events/${openEvent.id}?action=register` : "/student/events"}
             action={openEvent ? "View Event" : "Browse Events"}
           />
-          <ActionCard
+          <InlineActionCard
             title="Team Readiness"
             description={incompleteTeam ? `${incompleteTeam.teamName}: ${incompleteTeam.members.length} of ${incompleteTeam.event.minTeamSize ?? 1} minimum members joined.` : "You have no incomplete team waiting for members."}
             href="/student/teams"
             action="View My Teams"
           />
-          <ActionCard title="Results and Progress" description="Check published round progress and final event results." href="/student/results" action="View Results" />
-          <ActionCard title="Notifications" description={unreadCount ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}.` : "You are up to date."} href="/student/notifications" action="Open Notifications" />
-          <ActionCard title="Leaderboard" description="See your college and department position and learn how points are awarded." href="/student/leaderboard" action="View Rankings" />
         </div>
-      </section>
-      <div className="mt-6 space-y-3">
-        <h2 className="text-lg font-bold text-kec-text">Recent Point History</h2>
+      </DashboardActionPanel>
+
+      <DashboardMetricStrip
+        items={[
+          { label: "Total Points", value: stats?.totalPoints ?? 0, hint: "From declared results" },
+          { label: "Events Participated", value: stats?.totalEventsRegistered ?? 0, hint: "Registered events" },
+          { label: "Wins", value: stats?.winsCount ?? 0, hint: "Winner tags" },
+          { label: "Runner-ups", value: stats?.runnerUpCount ?? 0, hint: "Runner-up tags" },
+          { label: "Participation Count", value: stats?.participationCount ?? 0, hint: "Participation points" }
+        ]}
+      />
+
+      <DashboardActionPanel title="Recent Point History" subtitle="Latest points credited to your profile.">
         <DataTable
           headers={["Event", "Category", "Type", "Points", "Date"]}
           rows={history.map((item) => [
@@ -96,6 +119,7 @@ export default function StudentDashboardShell() {
           ])}
           emptyMessage="No point history yet."
         />
+      </DashboardActionPanel>
       </div>
     </AppShell>
   );
@@ -103,16 +127,4 @@ export default function StudentDashboardShell() {
 
 function humanize(value: string) {
   return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function ActionCard({ title, description, href, action }: { title: string; description: string; href: string; action: string }) {
-  return (
-    <Card className="flex min-h-40 flex-col justify-between">
-      <div>
-        <h3 className="text-base font-bold text-kec-text">{title}</h3>
-        <p className="mt-2 text-sm text-kec-secondary">{description}</p>
-      </div>
-      <Link className="mt-4" href={href}><Button className="w-full" type="button" variant="secondary">{action}</Button></Link>
-    </Card>
-  );
 }

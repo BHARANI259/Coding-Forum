@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import DataTable from "@/components/ui/DataTable";
-import PageHeader from "@/components/ui/PageHeader";
-import StatCard from "@/components/ui/StatCard";
+import {
+  DashboardActionPanel,
+  DashboardMetricStrip,
+  DashboardQuickAccess,
+  DashboardWelcomeCard,
+  type DashboardTile
+} from "@/components/dashboard/DashboardHomeBlocks";
 import { getFacultyDepartmentSummary, getFacultyEvents, type EventItem, type FacultyDepartmentSummary } from "@/lib/api";
+import { getCurrentUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/dateFormat";
+import Link from "next/link";
 
 export default function FacultyDashboardShell() {
   const [summary, setSummary] = useState<FacultyDepartmentSummary | null>(null);
@@ -37,35 +42,59 @@ export default function FacultyDashboardShell() {
   const needsAttention = events
     .filter((event) => event.status === "PUBLISHED" || event.status === "ONGOING")
     .sort((first, second) => (first.startDatetime ?? "").localeCompare(second.startDatetime ?? ""));
+  const user = getCurrentUser();
+  const quickAccess: DashboardTile[] = [
+    { title: "Assigned Events", description: "Manage your events", href: "/faculty/events", icon: "calendar" },
+    { title: "Results", description: "Round publishing", href: "/faculty/results", icon: "results" },
+    { title: "Reports", description: "Assigned reports", href: "/faculty/reports", icon: "reports" },
+    { title: "Department Monitoring", description: "Dept overview", href: "/faculty/department-monitoring", icon: "department" },
+    { title: "Notifications", description: "Forum updates", href: "/faculty/notifications", icon: "notification" },
+    { title: "Profile", description: "Contact details", href: "/faculty/profile", icon: "profile" }
+  ];
 
   return (
     <AppShell expectedRole="FACULTY" title="Faculty Dashboard">
-      <PageHeader
-        title="Faculty Dashboard"
-        subtitle="Assigned event and department monitoring overview."
-      />
-      {error ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Assigned Events" value={events.length} hint="Events assigned to you" />
-        <StatCard label="Needs Attention" value={needsAttention.length} hint="Published or ongoing events" />
-        <StatCard label="Department Students" value={summary?.departmentStudents ?? "-"} hint={summary?.departmentCode ?? "Monitoring not enabled"} />
-        <StatCard label="Department Points" value={summary?.departmentTotalPoints ?? "-"} hint="From student points" />
+      <div className="space-y-6">
+      <div>
+        <p className="text-sm font-bold uppercase tracking-wide text-kec-purple">Home</p>
+        <h1 className="mt-1 text-3xl font-black text-kec-text">Faculty Dashboard</h1>
+        <p className="mt-1 text-sm text-kec-secondary">Assigned events, result publishing, reports, and department monitoring.</p>
       </div>
-      <Card className="mt-6">
-        <h2 className="text-lg font-bold text-kec-text">
-          {summary ? `${summary.departmentCode} Department Monitoring` : "Assigned Event Management"}
-        </h2>
-        <p className="mt-2 text-sm text-kec-secondary">
-          {summary
-            ? `${summary.departmentName} has ${summary.departmentParticipations} event participations recorded.`
-            : "Assigned event management remains available from the Events section. Department monitoring appears here only when enabled."}
-        </p>
-      </Card>
-      <section className="mt-6 space-y-3">
-        <div>
-          <h2 className="text-lg font-bold text-kec-text">Needs Attention</h2>
-          <p className="text-sm text-kec-secondary">Assigned events with a current action.</p>
+      {error ? <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+
+      <DashboardWelcomeCard
+        roleLabel="Faculty Incharge"
+        name={user?.name ?? "Faculty"}
+        email={user?.email ?? ""}
+        href="/faculty/profile"
+        summary={`${events.length} assigned event${events.length === 1 ? "" : "s"}${summary ? ` and ${summary.departmentCode} monitoring enabled` : ""}.`}
+      />
+
+      <DashboardQuickAccess title="Quick Access" subtitle="Open the faculty workflows used most often." tiles={quickAccess} />
+
+      <DashboardMetricStrip
+        items={[
+          { label: "Assigned Events", value: events.length, hint: "Events assigned to you" },
+          { label: "Needs Attention", value: needsAttention.length, hint: "Published or ongoing events" },
+          { label: "Department Students", value: summary?.departmentStudents ?? "-", hint: summary?.departmentCode ?? "Monitoring not enabled" },
+          { label: "Department Points", value: summary?.departmentTotalPoints ?? "-", hint: "From student points" }
+        ]}
+      />
+
+      <DashboardActionPanel
+        title={summary ? `${summary.departmentCode} Department Monitoring` : "Assigned Event Management"}
+        subtitle={summary
+          ? `${summary.departmentName} has ${summary.departmentParticipations} event participations recorded.`
+          : "Assigned event management remains available from the Events section. Department monitoring appears here only when enabled."}
+        actionHref={summary ? "/faculty/department-monitoring" : "/faculty/events"}
+        actionLabel={summary ? "Open Monitoring" : "Open Events"}
+      >
+        <div className="rounded-2xl border border-kec-border bg-white/60 p-4 text-sm text-kec-secondary">
+          Use this dashboard as your daily checklist: registrations before the event, round result publishing during the event, and post-event media/reports after completion.
         </div>
+      </DashboardActionPanel>
+
+      <DashboardActionPanel title="Needs Attention" subtitle="Assigned events with a current action.">
         <DataTable
           headers={["Event", "Current State", "Recommended Action", "Open"]}
           rows={needsAttention.slice(0, 5).map((event) => [
@@ -76,12 +105,9 @@ export default function FacultyDashboardShell() {
           ])}
           emptyMessage="No assigned event needs action right now."
         />
-      </section>
-      <section className="mt-6 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-kec-text">Assigned Events</h2>
-          <Link href="/faculty/events"><Button type="button" variant="secondary">View All</Button></Link>
-        </div>
+      </DashboardActionPanel>
+
+      <DashboardActionPanel title="Assigned Events" subtitle="Latest assigned events." actionHref="/faculty/events" actionLabel="View All">
         <DataTable
           headers={["Event", "Category", "Type", "Status", "Registration", "Start", "Action"]}
           rows={events.slice(0, 5).map((event) => [
@@ -95,7 +121,8 @@ export default function FacultyDashboardShell() {
           ])}
           emptyMessage="No assigned events found."
         />
-      </section>
+      </DashboardActionPanel>
+      </div>
     </AppShell>
   );
 }
