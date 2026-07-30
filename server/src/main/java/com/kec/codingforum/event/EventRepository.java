@@ -15,6 +15,8 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     Optional<Event> findByIdAndInchargesId(Long id, Long facultyId);
 
+    Optional<Event> findByPosterImageUrl(String posterImageUrl);
+
     List<Event> findByStatusInOrderByStartDatetimeAsc(List<String> statuses);
 
     List<Event> findByStartDatetimeGreaterThanEqualAndStartDatetimeLessThanOrderByStartDatetimeAsc(LocalDateTime start, LocalDateTime end);

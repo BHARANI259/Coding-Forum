@@ -433,6 +433,7 @@ public class ReportDataService {
                 item.getCaption(),
                 item.getOriginalFileName(),
                 item.getContentType(),
+                item.getMediaData(),
                 mediaDir.resolve(item.getStoredFileName()).normalize().toString()
         );
     }

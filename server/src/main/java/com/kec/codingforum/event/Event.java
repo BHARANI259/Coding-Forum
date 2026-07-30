@@ -3,10 +3,12 @@ package com.kec.codingforum.event;
 import com.kec.codingforum.user.User;
 import com.kec.codingforum.department.Department;
 import com.kec.codingforum.user.Faculty;
+import jakarta.persistence.Basic;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -86,6 +88,10 @@ public class Event {
 
     @Column(name = "poster_uploaded_at")
     private LocalDateTime posterUploadedAt;
+
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "poster_image_data")
+    private byte[] posterImageData;
 
     @ManyToOne
     @JoinColumn(name = "created_by")

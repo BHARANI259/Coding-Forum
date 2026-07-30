@@ -276,9 +276,16 @@ public class PdfReportService {
             PdfPCell cell = new PdfPCell();
             cell.setPadding(6);
             try {
-                Path path = Path.of(media.filePath());
-                if (Files.exists(path) && Files.isRegularFile(path)) {
-                    Image image = Image.getInstance(path.toAbsolutePath().toString());
+                Image image = null;
+                if (media.imageData() != null && media.imageData().length > 0) {
+                    image = Image.getInstance(media.imageData());
+                } else if (media.filePath() != null && !media.filePath().isBlank()) {
+                    Path path = Path.of(media.filePath());
+                    if (Files.exists(path) && Files.isRegularFile(path)) {
+                        image = Image.getInstance(path.toAbsolutePath().toString());
+                    }
+                }
+                if (image != null) {
                     image.scaleToFit(340, 190);
                     image.setAlignment(Element.ALIGN_CENTER);
                     cell.addElement(image);

@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This project can be deployed to any platform that supports Java 21, Node.js, PostgreSQL, and persistent file storage for uploads.
+This project can be deployed to any platform that supports Java 21, Node.js, and PostgreSQL.
 
 ## Recommended Options
 
@@ -14,7 +14,7 @@ This project can be deployed to any platform that supports Java 21, Node.js, Pos
 
 - Java 21
 - PostgreSQL
-- Writable persistent upload directory
+- PostgreSQL storage for event posters and post-event media
 
 ### Build
 
@@ -115,14 +115,16 @@ curl -X POST https://your-backend-domain/api/admin/mail/test `
 
 ### Upload Storage
 
-`UPLOAD_ROOT_DIR` must point to a persistent writable directory.
+Event posters and post-event media uploaded after the database-backed storage migrations are stored in PostgreSQL. `UPLOAD_ROOT_DIR` is still kept for compatibility with older file-backed media records and local temporary fallback paths.
 
 The application stores:
 
-- event posters under `EVENT_POSTERS_DIR`
-- post-event media under `EVENT_MEDIA_DIR`
+- event poster bytes in the `events` table
+- legacy event poster files under `EVENT_POSTERS_DIR` only as a compatibility fallback
+- post-event media bytes in the `event_media` table
+- legacy post-event media files under `EVENT_MEDIA_DIR` only as a compatibility fallback
 
-Do not use temporary build directories for uploads in production.
+No Render persistent disk is required for newly uploaded posters or post-event media.
 
 ## Frontend Deployment
 
@@ -170,7 +172,7 @@ psql -h localhost -U postgres -d postgres -f server/db/postgres_setup.sql
 - Set `NEXT_PUBLIC_API_URL` to the backend API URL.
 - Keep `RATE_LIMIT_ENABLED=true` unless a gateway/WAF already provides equivalent login throttling.
 - Keep `CSP_REPORT_ONLY` in report-only mode until violations are reviewed in production logs/browser console.
-- Ensure upload directory is persistent.
+- Confirm event poster and post-event media uploads work on the deployment host.
 - Keep email disabled unless SMTP is configured.
 - Confirm `GET /api/health` returns `UP`.
 - Confirm frontend login works for each role.
@@ -195,9 +197,9 @@ Check:
 - migrations were not edited after being applied
 - the target database is not partially migrated from a different branch
 
-### Uploads disappear after restart
+### Old Uploads disappear after restart
 
-The upload root is not persistent. Configure a volume or permanent directory.
+Older file-backed uploads can disappear if the previous upload root was not persistent. New event posters and post-event media are stored in PostgreSQL after the database-backed storage migrations.
 
 ### Faculty cannot access event
 

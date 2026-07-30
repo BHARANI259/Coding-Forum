@@ -123,6 +123,7 @@ public final class ReportModels {
             String caption,
             String originalFileName,
             String contentType,
+            byte[] imageData,
             String filePath
     ) {
     }

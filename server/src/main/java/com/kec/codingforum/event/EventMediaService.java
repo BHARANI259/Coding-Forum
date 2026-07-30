@@ -5,6 +5,7 @@ import com.kec.codingforum.event.dto.UpdateEventMediaRequest;
 import com.kec.codingforum.user.User;
 import com.kec.codingforum.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
@@ -19,7 +20,6 @@ import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -155,17 +155,11 @@ public class EventMediaService {
         String normalizedType = validMediaType(mediaType);
         User uploader = users.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found."));
         try {
-            Files.createDirectories(mediaDir);
             List<EventMediaDto> uploaded = new ArrayList<>();
             for (MultipartFile file : files) {
                 validateFile(file);
                 String contentType = normalize(file.getContentType());
                 String storedName = "event-" + event.getId() + "-media-" + UUID.randomUUID() + EXTENSIONS.get(contentType);
-                Path target = mediaDir.resolve(storedName).normalize();
-                if (!target.startsWith(mediaDir)) {
-                    throw new IllegalArgumentException("Invalid media file name.");
-                }
-                Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
 
                 EventMedia item = new EventMedia();
                 item.setEvent(event);
@@ -177,6 +171,7 @@ public class EventMediaService {
                 item.setContentType(contentType);
                 item.setSizeBytes(file.getSize());
                 item.setFileUrl(admin ? adminFileUrl(event.getId(), 0L) : facultyFileUrl(event.getId(), 0L));
+                item.setMediaData(file.getBytes());
                 EventMedia saved = media.save(item);
                 saved.setFileUrl(admin ? adminFileUrl(event.getId(), saved.getId()) : facultyFileUrl(event.getId(), saved.getId()));
                 uploaded.add(toDto(saved, saved.getFileUrl()));
@@ -202,6 +197,9 @@ public class EventMediaService {
     }
 
     private MediaResource load(EventMedia item) {
+        if (item.getMediaData() != null && item.getMediaData().length > 0) {
+            return new MediaResource(new ByteArrayResource(item.getMediaData()), item.getContentType(), item.getOriginalFileName());
+        }
         Path file = mediaDir.resolve(safeFileName(item.getStoredFileName())).normalize();
         if (!file.startsWith(mediaDir) || !Files.exists(file) || !Files.isRegularFile(file)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Event media file not found.");

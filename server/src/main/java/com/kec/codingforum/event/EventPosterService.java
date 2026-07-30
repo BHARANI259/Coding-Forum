@@ -1,6 +1,7 @@
 package com.kec.codingforum.event;
 
 import com.kec.codingforum.event.dto.EventPosterDto;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -15,7 +16,6 @@ import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Map;
@@ -50,20 +50,15 @@ public class EventPosterService {
         Event event = findEvent(eventId);
         validate(file);
         try {
-            Files.createDirectories(posterDir);
             deleteExistingFile(event);
             String contentType = normalizeContentType(file.getContentType());
             String storageName = "event-" + eventId + "-" + UUID.randomUUID() + EXTENSIONS.get(contentType);
-            Path target = posterDir.resolve(storageName).normalize();
-            if (!target.startsWith(posterDir)) {
-                throw new IllegalArgumentException("Invalid poster file name.");
-            }
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
             event.setPosterImageUrl("/api/public/event-posters/" + storageName);
             event.setPosterOriginalName(safeOriginalName(file.getOriginalFilename()));
             event.setPosterContentType(contentType);
             event.setPosterSizeBytes(file.getSize());
             event.setPosterUploadedAt(LocalDateTime.now());
+            event.setPosterImageData(file.getBytes());
             event.setUpdatedAt(LocalDateTime.now());
             return toDto(event);
         } catch (IOException exception) {
@@ -80,6 +75,7 @@ public class EventPosterService {
         event.setPosterContentType(null);
         event.setPosterSizeBytes(null);
         event.setPosterUploadedAt(null);
+        event.setPosterImageData(null);
         event.setUpdatedAt(LocalDateTime.now());
         return toDto(event);
     }
@@ -87,6 +83,20 @@ public class EventPosterService {
     @Transactional(readOnly = true)
     public PosterResource load(String fileName) {
         String safeName = safeFileName(fileName);
+        String posterUrl = "/api/public/event-posters/" + safeName;
+        Event event = events.findByPosterImageUrl(posterUrl)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Poster image not found."));
+        if (event.getPosterImageData() != null && event.getPosterImageData().length > 0) {
+            String contentType = normalizeContentType(event.getPosterContentType());
+            if (!ALLOWED_CONTENT_TYPES.contains(contentType)) {
+                contentType = contentTypeFromExtension(safeName);
+            }
+            return new PosterResource(new ByteArrayResource(event.getPosterImageData()), contentType);
+        }
+        return loadLegacyFile(safeName);
+    }
+
+    private PosterResource loadLegacyFile(String safeName) {
         Path file = posterDir.resolve(safeName).normalize();
         if (!file.startsWith(posterDir) || !Files.exists(file) || !Files.isRegularFile(file)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Poster image not found.");

@@ -1,6 +1,7 @@
 package com.kec.codingforum.event;
 
 import com.kec.codingforum.user.User;
+import jakarta.persistence.Basic;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -54,6 +55,10 @@ public class EventMedia {
 
     @Column(name = "file_url", nullable = false)
     private String fileUrl;
+
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "media_data")
+    private byte[] mediaData;
 
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt = LocalDateTime.now();

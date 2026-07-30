@@ -43,7 +43,7 @@ The application follows a clean split between a Spring Boot backend API and a Ne
 | UI | Tailwind CSS, responsive portal layout |
 | Charts | Recharts |
 | Reports | OpenPDF, Apache POI |
-| Files | Local upload storage with configurable upload root |
+| Files | Database-backed event posters and protected post-event media |
 | Auth | JWT-based role authorization |
 
 ## Repository Structure
@@ -355,7 +355,6 @@ Backend deployment requires:
 - Java 21 runtime
 - PostgreSQL connection
 - Environment variables for database, JWT, CORS, uploads, and mail
-- Persistent upload directory for posters and post-event media
 - Flyway migrations enabled
 
 Frontend deployment requires:
@@ -371,7 +370,7 @@ Recommended deployment options:
 | Backend | College server, VPS, Render, Railway |
 | Frontend | Vercel, Netlify, college server |
 | Database | College PostgreSQL, Neon, Supabase, Railway PostgreSQL |
-| Uploads | Persistent disk or mounted volume on backend host |
+| Uploads | PostgreSQL-backed event posters and post-event media |
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the detailed deployment checklist.
 
@@ -381,8 +380,8 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for the detailed deployment checklist.
 - Backend authorization must enforce every role boundary; frontend hiding is not a security control.
 - Student users must not access admin or faculty APIs.
 - Faculty users must access only assigned event management APIs.
-- Public file access is limited to event poster images.
-- Post-event media remains protected and must be fetched through authorized endpoints.
+- Public image access is limited to event poster images served from database-backed event metadata.
+- Post-event media is stored in the database, remains protected, and must be fetched through authorized endpoints.
 - SMTP email is disabled by default for local development.
 - WebSocket notification failure should not break REST notification fallback.
 
