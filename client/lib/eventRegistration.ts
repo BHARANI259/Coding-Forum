@@ -1,5 +1,5 @@
 import type { EventDetail, EventItem } from "@/lib/api";
-import { formatDateTime } from "@/lib/dateFormat";
+import { formatDateTime, parseAppDate } from "@/lib/dateFormat";
 
 export type EventRegistrationState = {
   available: boolean;
@@ -27,7 +27,7 @@ export function getEventRegistrationState(event: EventItem | EventDetail, now = 
     };
   }
 
-  if (event.endDatetime && now > new Date(event.endDatetime)) {
+  if (event.endDatetime && now > parseAppDate(event.endDatetime)) {
     return {
       available: false,
       label: "Event Ended",
@@ -54,7 +54,7 @@ export function getEventRegistrationState(event: EventItem | EventDetail, now = 
     };
   }
 
-  if (event.registrationStart && now < new Date(event.registrationStart)) {
+  if (event.registrationStart && now < parseAppDate(event.registrationStart)) {
     return {
       available: false,
       label: "Starts Soon",
@@ -63,7 +63,7 @@ export function getEventRegistrationState(event: EventItem | EventDetail, now = 
     };
   }
 
-  if (event.registrationEnd && now > new Date(event.registrationEnd)) {
+  if (event.registrationEnd && now > parseAppDate(event.registrationEnd)) {
     return {
       available: false,
       label: "Window Ended",

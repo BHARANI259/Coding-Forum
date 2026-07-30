@@ -77,6 +77,7 @@ For Neon or other hosted PostgreSQL databases, prefer:
 JDBC_DATABASE_URL=jdbc:postgresql://your-host/your-db?sslmode=require
 DB_USER=your-provider-user
 DB_PASSWORD=your-provider-password
+APP_TIME_ZONE=Asia/Kolkata
 ```
 
 If `JDBC_DATABASE_URL` is set, it overrides the composed local URL built from `DB_HOST`, `DB_PORT`, and `DB_NAME`.

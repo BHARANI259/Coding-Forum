@@ -905,22 +905,58 @@ a {
   position: relative;
   border: 2px solid rgba(109, 74, 255, 0.82);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.14);
   box-shadow: 0 24px 80px rgba(17, 24, 39, 0.32), 0 0 0 6px rgba(109, 74, 255, 0.08);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   padding: 34px;
   animation: auth-login-fade-in 0.42s ease-out both;
+  color-scheme: light;
 }
 
 .auth-login-card h1,
 .auth-login-card h2,
 .auth-login-card label {
-  color: #111827;
+  color: #111827 !important;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .auth-login-card p {
-  color: #374151;
+  color: #374151 !important;
+}
+
+.auth-login-card input {
+  border-color: rgba(255, 255, 255, 0.72) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #111827 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 12px 32px rgba(15, 23, 42, 0.14) !important;
+  backdrop-filter: blur(12px);
+}
+
+.auth-login-card input:focus {
+  border-color: rgba(109, 74, 255, 0.78) !important;
+  background: rgba(255, 255, 255, 0.24) !important;
+}
+
+.auth-login-card input::placeholder {
+  color: rgba(17, 24, 39, 0.58) !important;
+}
+
+.auth-login-card input:-webkit-autofill,
+.auth-login-card input:-webkit-autofill:hover,
+.auth-login-card input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #111827 !important;
+  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.18) inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.auth-login-card [aria-label="Show password"],
+.auth-login-card [aria-label="Hide password"] {
+  color: #4b5563 !important;
+}
+
+.auth-login-card [aria-label="Show password"]:hover,
+.auth-login-card [aria-label="Hide password"]:hover {
+  color: #6d4aff !important;
 }
 
 .auth-login-card-exit {

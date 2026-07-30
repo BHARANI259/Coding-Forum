@@ -11,6 +11,7 @@ import {
   sendPushTestNotification,
   subscribeCurrentDeviceToPush
 } from "@/lib/api";
+import { formatDateTime } from "@/lib/dateFormat";
 import {
   createBrowserSubscription,
   currentBrowserSubscription,
@@ -207,7 +208,7 @@ export default function PushNotificationSettings() {
                     {[device.browser, device.platform].filter(Boolean).join(" - ") || "Browser device"}
                   </p>
                   <p className="text-xs text-kec-muted">
-                    Last seen: {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : "Not recorded"}
+                    Last seen: {formatDateTime(device.lastSeenAt, "Not recorded")}
                   </p>
                 </div>
                 <Button type="button" variant="secondary" loading={busy} onClick={() => void removeDevice(device.id)}>

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
-import DataTable from "@/components/ui/DataTable";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
 import {
@@ -10,64 +9,26 @@ import {
   DashboardMetricStrip,
   DashboardQuickAccess,
   DashboardWelcomeCard,
+  InlineActionCard,
   type DashboardTile
 } from "@/components/dashboard/DashboardHomeBlocks";
 import {
   getAdminAnalyticsOverview,
-  getEventEngagement,
-  getTopDepartments,
-  getTopStudents,
-  type AdminAnalyticsSummary,
-  type EventEngagementRow,
-  type TopDepartmentAnalyticsRow,
-  type TopStudentAnalyticsRow
+  type AdminAnalyticsSummary
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 
 export default function AdminDashboardShell() {
   const [summary, setSummary] = useState<AdminAnalyticsSummary | null>(null);
-  const [topDepartments, setTopDepartments] = useState<TopDepartmentAnalyticsRow[]>([]);
-  const [topStudents, setTopStudents] = useState<TopStudentAnalyticsRow[]>([]);
-  const [eventEngagement, setEventEngagement] = useState<EventEngagementRow[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
-      const results = await Promise.allSettled([
-        getAdminAnalyticsOverview(),
-        getTopDepartments({ limit: 5 }),
-        getTopStudents({ limit: 5 }),
-        getEventEngagement({ limit: 5 })
-      ]);
-
-      const [analytics, departments, students, events] = results;
-      const failures: string[] = [];
-
-      if (analytics.status === "fulfilled") {
-        setSummary(analytics.value);
-      } else {
-        failures.push(`Overview: ${messageFromRejection(analytics.reason)}`);
+      try {
+        setSummary(await getAdminAnalyticsOverview());
+      } catch (exception) {
+        setError(exception instanceof Error ? exception.message : "Unable to load dashboard overview.");
       }
-
-      if (departments.status === "fulfilled") {
-        setTopDepartments(departments.value);
-      } else {
-        failures.push(`Top departments: ${messageFromRejection(departments.reason)}`);
-      }
-
-      if (students.status === "fulfilled") {
-        setTopStudents(students.value);
-      } else {
-        failures.push(`Top students: ${messageFromRejection(students.reason)}`);
-      }
-
-      if (events.status === "fulfilled") {
-        setEventEngagement(events.value);
-      } else {
-        setEventEngagement([]);
-      }
-
-      setError(failures.join(" "));
     }
     void load();
   }, []);
@@ -78,7 +39,6 @@ export default function AdminDashboardShell() {
     { title: "Faculty", description: "Faculty accounts", href: "/admin/faculty", icon: "faculty" },
     { title: "Departments", description: "Department setup", href: "/admin/departments", icon: "department" },
     { title: "Event Incharges", description: "Coordinator mapping", href: "/admin/event-incharges", icon: "group" },
-    { title: "Leaderboard", description: "Points ranking", href: "/admin/leaderboard", icon: "leaderboard" },
     { title: "Analytics", description: "Charts and trends", href: "/admin/analytics", icon: "chart" },
     { title: "Reports", description: "PDF and Excel", href: "/admin/reports", icon: "reports" },
     { title: "Notifications", description: "Forum updates", href: "/admin/notifications", icon: "notification" }
@@ -122,53 +82,29 @@ export default function AdminDashboardShell() {
         ]}
       />
 
-      <div className="space-y-6">
-        <DashboardActionPanel title="Top Departments" subtitle="Ranked by student points." actionHref="/admin/analytics" actionLabel="Open Analytics">
-          <DataTable
-            headers={["Rank", "Department", "Points", "Participants", "Wins"]}
-            rows={topDepartments.map((row) => [
-              row.rank,
-              `${row.departmentCode} - ${row.departmentName}`,
-              row.totalPoints,
-              row.participationCount,
-              row.wins
-            ])}
-            emptyMessage="No department points yet."
+      <DashboardActionPanel title="Essential Administration" subtitle="The dashboard only shows core controls. Use Analytics or Leaderboard pages when detailed rankings are needed.">
+        <div className="grid gap-4 lg:grid-cols-3">
+          <InlineActionCard
+            title="Event Setup"
+            description="Create events, upload posters, configure rounds, and add problem statements."
+            href="/admin/events"
+            action="Manage Events"
           />
-        </DashboardActionPanel>
-
-        <DashboardActionPanel title="Top Students" subtitle="Highest scoring participants from live point data." actionHref="/admin/leaderboard" actionLabel="View Leaderboard">
-          <DataTable
-            headers={["Rank", "Student", "Dept", "Points", "Wins"]}
-            rows={topStudents.map((row) => [
-              row.rank,
-              `${row.studentName} (${row.registerNumber})`,
-              row.departmentCode ?? "-",
-              row.totalPoints,
-              row.wins
-            ])}
-            emptyMessage="No student points yet."
+          <InlineActionCard
+            title="People"
+            description="Add or import students and faculty before assigning event responsibilities."
+            href="/admin/students"
+            action="Manage Students"
           />
-        </DashboardActionPanel>
-
-        <DashboardActionPanel title="Event Engagement" subtitle="Events with the most registration activity." actionHref="/admin/events" actionLabel="Manage Events">
-          <DataTable
-            headers={["Event", "Category", "Registrations", "Teams"]}
-            rows={eventEngagement.map((row) => [
-              row.eventTitle,
-              row.categoryName,
-              row.registrationCount,
-              row.teamCount
-            ])}
-            emptyMessage="No event engagement yet."
+          <InlineActionCard
+            title="Reports"
+            description="Download event and participation reports for review or submission."
+            href="/admin/reports"
+            action="Open Reports"
           />
-        </DashboardActionPanel>
-      </div>
+        </div>
+      </DashboardActionPanel>
       </div>
     </AppShell>
   );
-}
-
-function messageFromRejection(reason: unknown) {
-  return reason instanceof Error ? reason.message : "Unable to load this section.";
 }

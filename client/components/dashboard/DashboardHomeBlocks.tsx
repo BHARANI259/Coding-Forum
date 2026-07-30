@@ -47,10 +47,10 @@ export function DashboardWelcomeCard({ roleLabel, name, email, href, summary }: 
               {initials(name)}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold uppercase tracking-wide text-kec-purple">{roleLabel}</p>
-              <h2 className="mt-1 truncate text-2xl font-black text-kec-text sm:text-3xl">{name}</h2>
-              <p className="mt-1 break-words text-sm text-kec-secondary sm:text-base">{email}</p>
-              {summary ? <p className="mt-2 text-sm text-kec-muted">{summary}</p> : null}
+              <p className="text-sm font-bold uppercase tracking-wide text-kec-purple dark:text-purple-300">{roleLabel}</p>
+              <h2 className="mt-1 truncate text-2xl font-black text-kec-text dark:text-white sm:text-3xl">{name}</h2>
+              <p className="mt-1 break-words text-sm text-kec-secondary dark:text-slate-200 sm:text-base">{email}</p>
+              {summary ? <p className="mt-2 text-sm text-kec-muted dark:text-slate-300">{summary}</p> : null}
             </div>
           </div>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-kec-border bg-white/60 text-kec-purple transition group-hover:translate-x-1 dark:border-slate-700 dark:bg-slate-800/80 dark:text-purple-200">
@@ -68,8 +68,8 @@ export function DashboardQuickAccess({ title, subtitle, tiles }: { title: string
   return (
     <Card className="bg-white/75 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/85 dark:shadow-black/25">
       <div className="mb-5">
-        <h2 className="text-xl font-black text-kec-text">{title}</h2>
-        {subtitle ? <p className="mt-1 text-sm text-kec-secondary">{subtitle}</p> : null}
+        <h2 className="text-xl font-black text-kec-text dark:text-white">{title}</h2>
+        {subtitle ? <p className="mt-1 text-sm text-kec-secondary dark:text-slate-300">{subtitle}</p> : null}
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {tiles.map((tile) => (
@@ -84,8 +84,8 @@ export function DashboardQuickAccess({ title, subtitle, tiles }: { title: string
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-kec-purple/10 text-kec-purple transition group-hover:bg-kec-purple group-hover:text-white dark:bg-kec-purple/20 dark:text-purple-200">
               <DashboardIcon name={tile.icon} />
             </div>
-            <p className="mt-3 line-clamp-2 text-sm font-bold text-kec-text">{tile.title}</p>
-            {tile.description ? <p className="mt-1 line-clamp-2 text-xs text-kec-muted">{tile.description}</p> : null}
+            <p className="mt-3 line-clamp-2 text-sm font-bold text-kec-text dark:text-white">{tile.title}</p>
+            {tile.description ? <p className="mt-1 line-clamp-2 text-xs text-kec-muted dark:text-slate-300">{tile.description}</p> : null}
           </Link>
         ))}
       </div>
@@ -98,9 +98,9 @@ export function DashboardMetricStrip({ items }: { items: Array<{ label: string; 
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {items.map((item) => (
         <Card key={item.label} className="bg-white/75 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/85 dark:shadow-black/25">
-          <p className="text-sm font-semibold text-kec-secondary">{item.label}</p>
-          <p className="mt-3 text-3xl font-black text-kec-text">{item.value}</p>
-          {item.hint ? <p className="mt-1 text-xs text-kec-muted">{item.hint}</p> : null}
+          <p className="text-sm font-semibold text-kec-secondary dark:text-slate-300">{item.label}</p>
+          <p className="mt-3 text-3xl font-black text-kec-text dark:text-white">{item.value}</p>
+          {item.hint ? <p className="mt-1 text-xs text-kec-muted dark:text-slate-400">{item.hint}</p> : null}
         </Card>
       ))}
     </div>
@@ -124,8 +124,8 @@ export function DashboardActionPanel({
     <Card className="bg-white/75 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/85 dark:shadow-black/25">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-lg font-black text-kec-text">{title}</h2>
-          {subtitle ? <p className="mt-1 text-sm text-kec-secondary">{subtitle}</p> : null}
+          <h2 className="text-lg font-black text-kec-text dark:text-white">{title}</h2>
+          {subtitle ? <p className="mt-1 text-sm text-kec-secondary dark:text-slate-300">{subtitle}</p> : null}
         </div>
         {actionHref && actionLabel ? (
           <Link href={actionHref}>
@@ -141,8 +141,8 @@ export function DashboardActionPanel({
 export function InlineActionCard({ title, description, href, action }: { title: string; description: string; href: string; action: string }) {
   return (
     <div className="rounded-2xl border border-kec-border bg-white/60 p-4 dark:border-slate-700/80 dark:bg-slate-800/70">
-      <h3 className="text-base font-black text-kec-text">{title}</h3>
-      <p className="mt-2 text-sm text-kec-secondary">{description}</p>
+      <h3 className="text-base font-black text-kec-text dark:text-white">{title}</h3>
+      <p className="mt-2 text-sm text-kec-secondary dark:text-slate-300">{description}</p>
       <Link className="mt-4 block" href={href}>
         <Button className="w-full" type="button" variant="secondary">{action}</Button>
       </Link>

@@ -1,5 +1,5 @@
 import { API_BASE_URL, type NotificationItem, type UserRole } from "./api";
-import { formatDate } from "@/lib/dateFormat";
+import { formatDate, parseAppDate } from "@/lib/dateFormat";
 
 export function notificationsPathForRole(role: UserRole) {
   if (role === "STUDENT") {
@@ -74,7 +74,5 @@ export function shortTime(value: string) {
 }
 
 function parseNotificationTimestamp(value: string) {
-  const normalized = value.trim();
-  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalized);
-  return new Date(hasTimezone ? normalized : `${normalized}Z`).getTime();
+  return parseAppDate(value).getTime();
 }

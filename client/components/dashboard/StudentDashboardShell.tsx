@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
-import DataTable from "@/components/ui/DataTable";
 import {
   DashboardActionPanel,
   DashboardMetricStrip,
@@ -11,13 +10,11 @@ import {
   InlineActionCard,
   type DashboardTile
 } from "@/components/dashboard/DashboardHomeBlocks";
-import { getMyPointHistory, getMyRegistrations, getMyStatistics, getMyTeams, getStudentEvents, getUnreadNotificationCount, type EventItem, type MyRegistration, type StudentPointHistory, type StudentStatistics, type TeamDetail } from "@/lib/api";
+import { getMyRegistrations, getMyStatistics, getMyTeams, getStudentEvents, getUnreadNotificationCount, type EventItem, type MyRegistration, type StudentStatistics, type TeamDetail } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
-import { formatDateTime } from "@/lib/dateFormat";
 
 export default function StudentDashboardShell() {
   const [stats, setStats] = useState<StudentStatistics | null>(null);
-  const [history, setHistory] = useState<StudentPointHistory[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [registrations, setRegistrations] = useState<MyRegistration[]>([]);
   const [teams, setTeams] = useState<TeamDetail[]>([]);
@@ -28,15 +25,13 @@ export default function StudentDashboardShell() {
     async function load() {
       const results = await Promise.allSettled([
           getMyStatistics(),
-          getMyPointHistory({ size: 5 }),
           getStudentEvents(),
           getMyRegistrations(),
           getMyTeams(),
           getUnreadNotificationCount()
       ]);
-      const [statistics, pointHistory, eventList, registrationList, teamList, unread] = results;
+      const [statistics, eventList, registrationList, teamList, unread] = results;
       if (statistics.status === "fulfilled") setStats(statistics.value);
-      if (pointHistory.status === "fulfilled") setHistory(pointHistory.value.content);
       if (eventList.status === "fulfilled") setEvents(eventList.value);
       if (registrationList.status === "fulfilled") setRegistrations(registrationList.value);
       if (teamList.status === "fulfilled") setTeams(teamList.value);
@@ -55,7 +50,6 @@ export default function StudentDashboardShell() {
     { title: "My Registrations", description: "Your enrolled events", href: "/student/registrations", icon: "document" },
     { title: "My Teams", description: "Team codes and members", href: "/student/teams", icon: "group" },
     { title: "Results", description: "Rounds and points", href: "/student/results", icon: "results" },
-    { title: "Leaderboard", description: "Rankings", href: "/student/leaderboard", icon: "leaderboard" },
     { title: "Notifications", description: "Forum updates", href: "/student/notifications", icon: "notification", badge: unreadCount },
     { title: "Profile", description: "Personal details", href: "/student/profile", icon: "profile" }
   ];
@@ -100,31 +94,14 @@ export default function StudentDashboardShell() {
       <DashboardMetricStrip
         items={[
           { label: "Total Points", value: stats?.totalPoints ?? 0, hint: "From declared results" },
-          { label: "Events Participated", value: stats?.totalEventsRegistered ?? 0, hint: "Registered events" },
+          { label: "Registered Events", value: stats?.totalEventsRegistered ?? 0, hint: "Your event count" },
+          { label: "My Teams", value: teams.length, hint: "Created or joined teams" },
+          { label: "Unread Notifications", value: unreadCount, hint: "Forum updates" },
           { label: "Wins", value: stats?.winsCount ?? 0, hint: "Winner tags" },
-          { label: "Runner-ups", value: stats?.runnerUpCount ?? 0, hint: "Runner-up tags" },
-          { label: "Participation Count", value: stats?.participationCount ?? 0, hint: "Participation points" }
+          { label: "Runner-ups", value: stats?.runnerUpCount ?? 0, hint: "Runner-up tags" }
         ]}
       />
-
-      <DashboardActionPanel title="Recent Point History" subtitle="Latest points credited to your profile.">
-        <DataTable
-          headers={["Event", "Category", "Type", "Points", "Date"]}
-          rows={history.map((item) => [
-            item.eventTitle,
-            item.categoryName,
-            humanize(item.pointType),
-            item.points,
-            formatDateTime(item.createdAt)
-          ])}
-          emptyMessage="No point history yet."
-        />
-      </DashboardActionPanel>
       </div>
     </AppShell>
   );
-}
-
-function humanize(value: string) {
-  return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

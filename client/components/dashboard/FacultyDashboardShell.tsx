@@ -2,19 +2,16 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
-import Button from "@/components/ui/Button";
-import DataTable from "@/components/ui/DataTable";
 import {
   DashboardActionPanel,
   DashboardMetricStrip,
   DashboardQuickAccess,
   DashboardWelcomeCard,
+  InlineActionCard,
   type DashboardTile
 } from "@/components/dashboard/DashboardHomeBlocks";
 import { getFacultyDepartmentSummary, getFacultyEvents, type EventItem, type FacultyDepartmentSummary } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
-import { formatDateTime } from "@/lib/dateFormat";
-import Link from "next/link";
 
 export default function FacultyDashboardShell() {
   const [summary, setSummary] = useState<FacultyDepartmentSummary | null>(null);
@@ -82,51 +79,31 @@ export default function FacultyDashboardShell() {
       />
 
       <DashboardActionPanel
-        title={summary ? `${summary.departmentCode} Department Monitoring` : "Assigned Event Management"}
-        subtitle={summary
-          ? `${summary.departmentName} has ${summary.departmentParticipations} event participations recorded.`
-          : "Assigned event management remains available from the Events section. Department monitoring appears here only when enabled."}
-        actionHref={summary ? "/faculty/department-monitoring" : "/faculty/events"}
-        actionLabel={summary ? "Open Monitoring" : "Open Events"}
+        title="Essential Actions"
+        subtitle="Use these shortcuts for the work that normally needs faculty attention."
       >
-        <div className="rounded-2xl border border-kec-border bg-white/60 p-4 text-sm text-kec-secondary">
-          Use this dashboard as your daily checklist: registrations before the event, round result publishing during the event, and post-event media/reports after completion.
+        <div className="grid gap-4 lg:grid-cols-3">
+          <InlineActionCard
+            title="Assigned Events"
+            description={`${events.length} event${events.length === 1 ? "" : "s"} assigned to you.`}
+            href="/faculty/events"
+            action="Open Events"
+          />
+          <InlineActionCard
+            title="Pending Event Work"
+            description={needsAttention.length ? `${needsAttention.length} published or ongoing event${needsAttention.length === 1 ? "" : "s"} may need attention.` : "No assigned event needs action right now."}
+            href="/faculty/events"
+            action="Review"
+          />
+          <InlineActionCard
+            title={summary ? "Department Monitoring" : "Reports"}
+            description={summary ? `${summary.departmentCode} monitoring is available for your department.` : "Download reports for assigned events when needed."}
+            href={summary ? "/faculty/department-monitoring" : "/faculty/reports"}
+            action={summary ? "Open Monitoring" : "Open Reports"}
+          />
         </div>
-      </DashboardActionPanel>
-
-      <DashboardActionPanel title="Needs Attention" subtitle="Assigned events with a current action.">
-        <DataTable
-          headers={["Event", "Current State", "Recommended Action", "Open"]}
-          rows={needsAttention.slice(0, 5).map((event) => [
-            event.title,
-            formatStatus(event.status),
-            event.status === "ONGOING" ? "Review the active round and publish its result when ready" : event.registrationOpen ? "Monitor registrations before the event starts" : "Start the first pending round when the event begins",
-            <Link key="open" href={`/faculty/events/${event.id}`}><Button type="button">Open Event</Button></Link>
-          ])}
-          emptyMessage="No assigned event needs action right now."
-        />
-      </DashboardActionPanel>
-
-      <DashboardActionPanel title="Assigned Events" subtitle="Latest assigned events." actionHref="/faculty/events" actionLabel="View All">
-        <DataTable
-          headers={["Event", "Category", "Type", "Status", "Registration", "Start", "Action"]}
-          rows={events.slice(0, 5).map((event) => [
-            event.title,
-            event.category?.name ?? "-",
-            formatStatus(event.eventType),
-            formatStatus(event.status),
-            event.registrationOpen ? "Open" : "Closed",
-            formatDateTime(event.startDatetime),
-            <Link key="view" href={`/faculty/events/${event.id}`}><Button type="button" variant="secondary">View</Button></Link>
-          ])}
-          emptyMessage="No assigned events found."
-        />
       </DashboardActionPanel>
       </div>
     </AppShell>
   );
-}
-
-function formatStatus(value: string) {
-  return value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ");
 }

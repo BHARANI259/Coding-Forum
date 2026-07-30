@@ -8,6 +8,7 @@ import BackButton from "@/components/ui/BackButton";
 import Button from "@/components/ui/Button";
 import StudentEventCard from "@/components/events/StudentEventCard";
 import { getMyRegistrations, getStudentEvents, type EventItem } from "@/lib/api";
+import { parseAppDate } from "@/lib/dateFormat";
 
 export default function StudentEventsPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -108,7 +109,7 @@ function isCurrentAcademicYear(value: string | null) {
   if (!value) {
     return true;
   }
-  const eventDate = new Date(value);
+  const eventDate = parseAppDate(value);
   const now = new Date();
   const currentStartYear = now.getMonth() + 1 >= 5 ? now.getFullYear() : now.getFullYear() - 1;
   const start = new Date(currentStartYear, 4, 1, 0, 0, 0, 0);

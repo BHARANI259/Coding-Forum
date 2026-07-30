@@ -11,6 +11,8 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  jackson:
+    time-zone: ${APP_TIME_ZONE:Asia/Kolkata}
   flyway:
     enabled: true
   servlet:
@@ -37,6 +39,7 @@ server:
     mime-types: application/json,text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/xml
 
 app:
+  time-zone: ${APP_TIME_ZONE:Asia/Kolkata}
   cors:
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000,http://127.0.0.1:3000}
   jwt:
