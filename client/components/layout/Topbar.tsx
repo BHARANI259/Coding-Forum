@@ -10,7 +10,7 @@ type TopbarProps = {
 
 export default function Topbar({ title, onMenuClick }: TopbarProps) {
   return (
-    <header className="fixed inset-x-0 top-0 z-30 flex min-h-16 max-w-full items-center justify-between gap-2 border-b border-white/10 bg-kec-sidebar px-3 py-2 shadow-sm sm:gap-3 sm:px-4 lg:sticky lg:inset-auto lg:border-kec-border lg:bg-white lg:px-6">
+    <header className="fixed inset-x-0 top-0 z-30 flex min-h-16 max-w-full items-center justify-between gap-2 border-b border-white/10 bg-kec-sidebar px-3 py-2 shadow-sm sm:gap-3 sm:px-4 lg:sticky lg:inset-auto lg:border-kec-border lg:bg-white lg:px-6 dark:lg:border-slate-800 dark:lg:bg-slate-950">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
@@ -37,7 +37,7 @@ export default function Topbar({ title, onMenuClick }: TopbarProps) {
         <InstallAppButton compact className="hidden sm:inline-flex" />
         <ThemeToggle className="hidden sm:inline-flex" />
         <NotificationButton />
-        <div className="hidden max-w-[220px] truncate text-sm font-semibold text-white/90 sm:block lg:text-slate-600">Kongu Engineering College</div>
+        <div className="hidden max-w-[220px] truncate text-sm font-semibold text-white/90 sm:block lg:text-slate-600 dark:lg:text-slate-200">Kongu Engineering College</div>
       </div>
     </header>
   );

@@ -5,13 +5,10 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import {
   deactivateCurrentPushSubscription,
-  getPushNotificationDevices,
   getWebPushVapidPublicKey,
-  removePushNotificationDevice,
   sendPushTestNotification,
   subscribeCurrentDeviceToPush
 } from "@/lib/api";
-import { formatDateTime } from "@/lib/dateFormat";
 import {
   createBrowserSubscription,
   currentBrowserSubscription,
@@ -19,11 +16,10 @@ import {
   isPushSupported,
   subscriptionToPayload
 } from "@/lib/push-notifications";
-import type { PushDevice, PushSubscriptionStatus } from "@/types/push-notification";
+import type { PushSubscriptionStatus } from "@/types/push-notification";
 
 export default function PushNotificationSettings() {
   const [status, setStatus] = useState<PushSubscriptionStatus>("unsupported");
-  const [devices, setDevices] = useState<PushDevice[]>([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -38,11 +34,7 @@ export default function PushNotificationSettings() {
       return;
     }
     try {
-      const [subscription, deviceList] = await Promise.all([
-        currentBrowserSubscription(),
-        getPushNotificationDevices()
-      ]);
-      setDevices(deviceList);
+      const subscription = await currentBrowserSubscription();
       if (Notification.permission === "denied") {
         setStatus("permission-denied");
       } else if (subscription) {
@@ -126,21 +118,6 @@ export default function PushNotificationSettings() {
     }
   }
 
-  async function removeDevice(deviceId: number) {
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      await removePushNotificationDevice(deviceId);
-      setMessage("Notification device removed.");
-      await loadDevices();
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Unable to remove notification device.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function sendTest() {
     setBusy(true);
     setError("");
@@ -185,7 +162,7 @@ export default function PushNotificationSettings() {
               Enable notifications
             </Button>
           )}
-          <Button type="button" variant="secondary" loading={busy} disabled={!devices.length} onClick={() => void sendTest()}>
+          <Button type="button" variant="secondary" loading={busy} disabled={status !== "subscribed"} onClick={() => void sendTest()}>
             Send test notification
           </Button>
         </div>
@@ -193,32 +170,6 @@ export default function PushNotificationSettings() {
 
       {message ? <p className="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">{message}</p> : null}
       {error ? <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-
-      <div className="mt-5">
-        <h3 className="text-sm font-bold text-kec-text">Notification devices</h3>
-        {!devices.length ? (
-          <p className="mt-2 text-sm text-kec-muted">No active push notification devices yet.</p>
-        ) : (
-          <div className="mt-3 space-y-3">
-            {devices.map((device) => (
-              <div key={device.id} className="flex flex-col gap-3 rounded-lg border border-kec-border p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="font-semibold text-kec-text">{device.deviceName || "Notification device"}</p>
-                  <p className="break-words text-sm text-kec-secondary">
-                    {[device.browser, device.platform].filter(Boolean).join(" - ") || "Browser device"}
-                  </p>
-                  <p className="text-xs text-kec-muted">
-                    Last seen: {formatDateTime(device.lastSeenAt, "Not recorded")}
-                  </p>
-                </div>
-                <Button type="button" variant="secondary" loading={busy} onClick={() => void removeDevice(device.id)}>
-                  Remove
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </Card>
   );
 }

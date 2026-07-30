@@ -63,26 +63,37 @@ public class PushSubscriptionController {
     @PostMapping("/test")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void sendTestNotification(@Valid @RequestBody PushSubscriptionRequest request) {
-        if (!webPushService.isConfigured()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Push notifications are not configured. Set WEB_PUSH_ENABLED=true and provide valid VAPID keys."
+        try {
+            if (!webPushService.isConfigured()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Push notifications are not configured. Set WEB_PUSH_ENABLED=true and provide valid VAPID keys."
+                );
+            }
+            PushSubscription subscription = subscriptionService.activeCurrentUserSubscription(request)
+                    .orElseThrow(() -> new IllegalArgumentException("Current device is not subscribed to push notifications."));
+            WebPushService.PushSendResult result = webPushService.sendToSubscription(
+                    subscription,
+                    new WebPushPayload(
+                            null,
+                            "PROFILE_OR_ACCOUNT_NOTICE",
+                            "KEC Coding Forum",
+                            "Push notifications are working on this device.",
+                            "/notifications"
+                    )
             );
-        }
-        PushSubscription subscription = subscriptionService.activeCurrentUserSubscription(request)
-                .orElseThrow(() -> new IllegalArgumentException("Current device is not subscribed to push notifications."));
-        WebPushService.PushSendResult result = webPushService.sendToSubscription(
-                subscription,
-                new WebPushPayload(
-                        null,
-                        "PROFILE_OR_ACCOUNT_NOTICE",
-                        "KEC Coding Forum",
-                        "Push notifications are working on this device.",
-                        "/notifications"
-                )
-        );
-        if (!result.success()) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, result.message());
+            if (!result.success()) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, result.message());
+            }
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (IllegalArgumentException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Unable to send test push notification. Remove this device, enable notifications again, and confirm the deployed VAPID keys match the browser subscription."
+            );
         }
     }
 }
