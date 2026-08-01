@@ -294,6 +294,10 @@ export default function AdminEventDetailPage() {
   const eventActive = Boolean(event && !eventClosed && (event.status === "PUBLISHED" || event.status === "ONGOING"));
   const setupEditable = event?.status === "DRAFT" && !eventClosed;
   const finalRoundAssigned = rounds.some((round) => round.finalRound);
+  const isContestCategory = event?.category?.categoryType === "CONTEST";
+  const isDomainCategory = event?.category?.categoryType === "DOMAIN";
+  const problemLabel = isDomainCategory ? "Domain" : "Problem Statement";
+  const problemPluralLabel = isDomainCategory ? "Domains" : "Problem Statements";
 
   return (
     <AppShell expectedRole="SUPER_ADMIN" title="Event Detail">
@@ -407,12 +411,14 @@ export default function AdminEventDetailPage() {
           <Card>
             <div id="problem-statements" className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-kec-text">Problem Statements</h2>
-                <p className="mt-1 text-sm text-kec-secondary">Add event problem statements with multiple reference links.</p>
+                <h2 className="text-base font-bold text-kec-text">{problemPluralLabel}</h2>
+                <p className="mt-1 text-sm text-kec-secondary">
+                  {isContestCategory ? "Contest categories do not require domain or problem statement selection." : `Add event ${problemPluralLabel.toLowerCase()} with multiple reference links.`}
+                </p>
               </div>
               {!eventClosed && editingProblemId ? <Button type="button" variant="secondary" onClick={() => { setEditingProblemId(null); setProblemForm(emptyProblemForm()); }}>Cancel Edit</Button> : null}
             </div>
-            {!eventClosed ? <form className="mt-4 space-y-4 rounded-xl border border-kec-border p-3 sm:p-4" onSubmit={handleSaveProblem}>
+            {!eventClosed && !isContestCategory ? <form className="mt-4 space-y-4 rounded-xl border border-kec-border p-3 sm:p-4" onSubmit={handleSaveProblem}>
               <div className="grid gap-3 md:grid-cols-2">
                 <Input label="Title" value={problemForm.title} onChange={(changeEvent) => setProblemForm({ ...problemForm, title: changeEvent.target.value })} required />
                 <label className="flex items-end gap-2 pb-3 text-sm font-semibold text-kec-text">
@@ -440,8 +446,10 @@ export default function AdminEventDetailPage() {
                   {!problemForm.links.length ? <p className="text-sm text-kec-muted">Reference links are optional. Add Google Drive, docs, websites, or dataset links if available.</p> : null}
                 </div>
               </div>
-              <Button type="submit" className="w-full sm:w-auto">{editingProblemId ? "Save Problem Statement" : "Add Problem Statement"}</Button>
-            </form> : <p className="mt-3 text-sm text-kec-secondary">Problem statements are retained for reference and cannot be changed after the event closes.</p>}
+              <Button type="submit" className="w-full sm:w-auto">{editingProblemId ? `Save ${problemLabel}` : `Add ${problemLabel}`}</Button>
+            </form> : isContestCategory ? (
+              <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">Use Codetantra mark import from the results page for this contest. No domain or problem statement setup is needed.</p>
+            ) : <p className="mt-3 text-sm text-kec-secondary">{problemPluralLabel} are retained for reference and cannot be changed after the event closes.</p>}
             <div className="mt-4">
               <DataTable
                 headers={["Title", "Description", "Links", "Status", "Actions"]}
@@ -460,7 +468,7 @@ export default function AdminEventDetailPage() {
                     <Button type="button" variant="danger" onClick={() => void removeProblem(item.id)}>Delete</Button>
                   </div>
                 ])}
-                emptyMessage="No problem statements."
+                emptyMessage={`No ${problemPluralLabel.toLowerCase()}.`}
               />
             </div>
           </Card>

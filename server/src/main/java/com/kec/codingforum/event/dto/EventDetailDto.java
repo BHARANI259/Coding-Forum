@@ -21,6 +21,7 @@ public record EventDetailDto(
         Integer maxParticipants,
         Integer maxTeams,
         boolean placementWillingOnly,
+        boolean mandatoryEvent,
         String status,
         Long createdByUserId,
         LocalDateTime createdAt,

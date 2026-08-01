@@ -22,6 +22,7 @@ public record UpdateEventRequest(
         Integer maxParticipants,
         Integer maxTeams,
         boolean placementWillingOnly,
+        boolean mandatoryEvent,
         String status,
         List<Long> allowedDepartmentIds,
         List<Integer> allowedYears,

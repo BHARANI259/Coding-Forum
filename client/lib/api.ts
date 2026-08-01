@@ -169,6 +169,26 @@ export type EventCategory = {
   id: number;
   name: string;
   weightage: number;
+  categoryType: "GENERAL" | "CONTEST" | "DOMAIN";
+  winnerPoints: number;
+  runnerUpPoints: number;
+  secondRunnerUpPoints: number;
+  participantPoints: number;
+  disqualifiedPoints: number;
+  notPresentedPoints: number;
+  active: boolean;
+};
+
+export type EventCategoryPayload = {
+  name: string;
+  weightage?: number;
+  categoryType: "GENERAL" | "CONTEST" | "DOMAIN";
+  winnerPoints: number;
+  runnerUpPoints: number;
+  secondRunnerUpPoints: number;
+  participantPoints: number;
+  disqualifiedPoints: number;
+  notPresentedPoints: number;
   active: boolean;
 };
 
@@ -196,6 +216,7 @@ export type EventItem = {
   maxTeamSize: number | null;
   maxParticipants: number | null;
   maxTeams: number | null;
+  mandatoryEvent: boolean;
   allowedDepartments: EventOption[];
   allowedYears: number[];
   allowedSections: string[];
@@ -235,6 +256,7 @@ export type EventPayload = {
   maxParticipants: number | null;
   maxTeams: number | null;
   placementWillingOnly: boolean;
+  mandatoryEvent: boolean;
   status: string;
   allowedDepartmentIds: number[];
   allowedYears: number[];
@@ -980,14 +1002,14 @@ export function getEventCategories(params: Record<string, string | number | bool
   return apiFetch<EventCategory[]>(`/admin/event-categories${toQuery(params)}`);
 }
 
-export function createEventCategory(payload: { name: string; weightage: number; active: boolean }) {
+export function createEventCategory(payload: EventCategoryPayload) {
   return apiFetch<EventCategory>("/admin/event-categories", {
     method: "POST",
     body: JSON.stringify(payload)
   });
 }
 
-export function updateEventCategory(id: number, payload: { name: string; weightage: number; active: boolean }) {
+export function updateEventCategory(id: number, payload: EventCategoryPayload) {
   return apiFetch<EventCategory>(`/admin/event-categories/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload)

@@ -47,6 +47,7 @@ type FormState = {
   maxParticipants: string;
   maxTeams: string;
   placementWillingOnly: boolean;
+  mandatoryEvent: boolean;
   allowedDepartmentIds: number[];
   allowedYears: number[];
   allowedSections: string[];
@@ -86,6 +87,7 @@ const initialState: FormState = {
   maxParticipants: "",
   maxTeams: "",
   placementWillingOnly: false,
+  mandatoryEvent: false,
   allowedDepartmentIds: [],
   allowedYears: [],
   allowedSections: [],
@@ -105,6 +107,11 @@ export default function EventForm({ mode, event }: EventFormProps) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [removingPoster, setRemovingPoster] = useState(false);
+  const selectedCategory = categories.find((category) => String(category.id) === form.categoryId) ?? null;
+  const isContestCategory = selectedCategory?.categoryType === "CONTEST";
+  const isDomainCategory = selectedCategory?.categoryType === "DOMAIN";
+  const problemLabel = isDomainCategory ? "Domain" : "Problem Statement";
+  const problemPluralLabel = isDomainCategory ? "Domains" : "Problem Statements";
   const finalRoundAssigned = cleanRoundDrafts(roundDrafts).some((round) => round.finalRound);
 
   useEffect(() => {
@@ -130,8 +137,9 @@ export default function EventForm({ mode, event }: EventFormProps) {
     setSaving(true);
     setError("");
     try {
-      validateProblemDrafts(problemDrafts);
-      const incompleteLink = problemDrafts.some((item) => item.links.some((link) => (link.label ?? "").trim() && !link.url.trim()));
+      const applicableProblemDrafts = isContestCategory ? [] : problemDrafts;
+      validateProblemDrafts(applicableProblemDrafts, problemLabel);
+      const incompleteLink = applicableProblemDrafts.some((item) => item.links.some((link) => (link.label ?? "").trim() && !link.url.trim()));
       if (incompleteLink) {
         throw new Error("Every reference link with a label needs a URL. Complete it or remove the link row before saving.");
       }
@@ -141,7 +149,7 @@ export default function EventForm({ mode, event }: EventFormProps) {
       if (posterFile) {
         await uploadEventPoster(saved.id, posterFile);
       }
-      for (const draft of cleanProblemDrafts(problemDrafts)) {
+      for (const draft of cleanProblemDrafts(applicableProblemDrafts)) {
         const links = draft.links
           .map((link, index) => ({
             id: null,
@@ -281,6 +289,13 @@ export default function EventForm({ mode, event }: EventFormProps) {
             <option value="">Select category</option>
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </Select>
+          {selectedCategory ? (
+            <div className="rounded-lg border border-kec-border bg-kec-bg px-3 py-2 text-sm text-kec-secondary md:col-span-2">
+              <span className="font-bold text-kec-text">Workflow:</span> {formatCategoryType(selectedCategory.categoryType)}
+              {isContestCategory ? " - Problem/domain selection is skipped. Import Codetantra marks from the final round result page." : null}
+              {isDomainCategory ? " - Students will choose a domain during registration when active domains are configured." : null}
+            </div>
+          ) : null}
           <Select label="Event Type" value={form.eventType} onChange={(e) => setForm({ ...form, eventType: e.target.value as FormState["eventType"] })}>
             <option value="INDIVIDUAL">Individual</option>
             <option value="TEAM">Team</option>
@@ -304,29 +319,41 @@ export default function EventForm({ mode, event }: EventFormProps) {
         />
       </Card>
 
-      <details className="rounded-xl border border-kec-border bg-white p-3 shadow-sm sm:p-4">
-        <summary className="cursor-pointer text-base font-bold text-kec-text">Optional Problem Statements</summary>
+      {isContestCategory ? (
+        <Card>
+          <h2 className="text-base font-bold text-kec-text">Contest Setup</h2>
+          <p className="mt-1 text-sm text-kec-secondary">Contest categories do not need problem statement or domain selection. Use the final round result page to import marks from Codetantra Excel.</p>
+          <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-kec-text">
+            <input type="checkbox" checked={form.mandatoryEvent} onChange={(e) => setForm({ ...form, mandatoryEvent: e.target.checked })} />
+            Mandatory contest for all eligible students
+          </label>
+          <p className="mt-2 text-xs text-kec-muted">Department, year, section, technical area, and placement restrictions below still apply.</p>
+        </Card>
+      ) : null}
+
+      <details className={`${isContestCategory ? "hidden" : ""} rounded-xl border border-kec-border bg-white p-3 shadow-sm sm:p-4`}>
+        <summary className="cursor-pointer text-base font-bold text-kec-text">Optional {problemPluralLabel}</summary>
         <p className="mt-1 text-sm text-kec-secondary">Add them now, or manage them from Event Detail after saving.</p>
       <Card className="mt-4 border-0 p-0 shadow-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold text-kec-text">Problem Statements</h2>
+            <h2 className="text-base font-bold text-kec-text">{problemPluralLabel}</h2>
             <p className="mt-1 text-sm text-kec-secondary">
-              Add problem statements now, or manage them later from the event detail page.
+              Add {problemPluralLabel.toLowerCase()} now, or manage them later from the event detail page.
             </p>
           </div>
-          <Button type="button" variant="secondary" onClick={addProblemDraft}>Add Problem Statement</Button>
+          <Button type="button" variant="secondary" onClick={addProblemDraft}>Add {problemLabel}</Button>
         </div>
         {mode === "edit" && event ? (
           <p className="mt-3 rounded-lg border border-kec-border bg-slate-50 px-3 py-2 text-sm text-kec-secondary">
-            Existing problem statements are edited from the event detail page. New entries added here will be appended when you update the event.
+            Existing {problemPluralLabel.toLowerCase()} are edited from the event detail page. New entries added here will be appended when you update the event.
           </p>
         ) : null}
         <div className="mt-4 space-y-4">
           {problemDrafts.map((draft, problemIndex) => (
             <div key={problemIndex} className="rounded-xl border border-kec-border p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-sm font-bold text-kec-text">Problem Statement {problemIndex + 1}</h3>
+                <h3 className="text-sm font-bold text-kec-text">{problemLabel} {problemIndex + 1}</h3>
                 <Button type="button" variant="ghost" onClick={() => removeProblemDraft(problemIndex)}>Remove</Button>
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -358,7 +385,7 @@ export default function EventForm({ mode, event }: EventFormProps) {
               </div>
             </div>
           ))}
-          {!problemDrafts.length ? <p className="text-sm text-kec-secondary">No problem statements added yet.</p> : null}
+          {!problemDrafts.length ? <p className="text-sm text-kec-secondary">No {problemPluralLabel.toLowerCase()} added yet.</p> : null}
         </div>
       </Card>
       </details>
@@ -562,6 +589,7 @@ function toPayload(form: FormState): EventPayload {
     maxParticipants: toNumber(form.maxParticipants),
     maxTeams: form.eventType === "TEAM" ? toNumber(form.maxTeams) : null,
     placementWillingOnly: form.placementWillingOnly,
+    mandatoryEvent: form.mandatoryEvent,
     status: form.status,
     allowedDepartmentIds: form.allowedDepartmentIds,
     allowedYears: form.allowedYears,
@@ -575,10 +603,10 @@ function cleanProblemDrafts(problemDrafts: ProblemDraft[]) {
   return problemDrafts.filter((item) => item.title.trim() && item.description.trim());
 }
 
-function validateProblemDrafts(problemDrafts: ProblemDraft[]) {
+function validateProblemDrafts(problemDrafts: ProblemDraft[], label = "Problem statement") {
   for (const draft of problemDrafts) {
     if (!draft.title.trim() || !draft.description.trim()) {
-      throw new Error("Every added problem statement needs both a title and a description. Complete it or remove the draft before saving.");
+      throw new Error(`Every added ${label.toLowerCase()} needs both a title and a description. Complete it or remove the draft before saving.`);
     }
     for (const link of draft.links) {
       if ((link.label ?? "").trim() && !link.url.trim()) {
@@ -657,6 +685,7 @@ function fromEvent(event: EventDetail): FormState {
     maxParticipants: event.maxParticipants ? String(event.maxParticipants) : "",
     maxTeams: event.maxTeams ? String(event.maxTeams) : "",
     placementWillingOnly: event.placementWillingOnly,
+    mandatoryEvent: event.mandatoryEvent,
     allowedDepartmentIds: event.allowedDepartments.map((item) => item.id),
     allowedYears: event.allowedYears,
     allowedSections: event.allowedSections,
@@ -671,6 +700,12 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
 
 function formatFormStatus(value: string) {
   return value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ");
+}
+
+function formatCategoryType(value: EventCategory["categoryType"]) {
+  if (value === "CONTEST") return "Contest / Placement drill";
+  if (value === "DOMAIN") return "Paper / Project domain";
+  return "General event";
 }
 
 function toNumber(value: string) {

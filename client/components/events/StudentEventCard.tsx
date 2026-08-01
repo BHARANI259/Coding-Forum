@@ -24,6 +24,7 @@ export default function StudentEventCard({ event, registered }: StudentEventCard
       <div className="p-4 sm:p-5">
         <div className="flex flex-wrap gap-1.5 sm:gap-2">
           <Badge variant="purple">{event.category?.name ?? "Uncategorized"}</Badge>
+          {event.mandatoryEvent ? <Badge variant="warning">Mandatory</Badge> : null}
           <Badge variant="info">{formatLabel(event.eventType)}</Badge>
           <Badge variant={registrationState.badgeVariant}>{registrationState.label}</Badge>
         </div>

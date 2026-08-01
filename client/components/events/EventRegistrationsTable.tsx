@@ -45,7 +45,7 @@ export default function EventRegistrationsTable({ registrations }: EventRegistra
               <tr>
                 <Header>Team / Participant</Header>
                 <Header>Member Count</Header>
-                <Header>Problem Statement</Header>
+                <Header>Problem / Domain</Header>
                 <Header>Status</Header>
                 <Header>Registered At</Header>
               </tr>
@@ -97,7 +97,7 @@ export default function EventRegistrationsTable({ registrations }: EventRegistra
               </div>
               <div className="mt-4 grid gap-3 text-sm">
                 <Info label="Members" value={String(group.memberCount)} />
-                <Info label="Problem" value={group.problem} />
+                <Info label="Selection" value={group.problem} />
                 <Info label="Registered At" value={group.registeredAt} />
               </div>
             </button>
@@ -110,7 +110,7 @@ export default function EventRegistrationsTable({ registrations }: EventRegistra
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h3 className="text-base font-black text-kec-text">{selectedGroup.title} Members</h3>
-              <p className="mt-1 text-sm text-kec-secondary">{selectedGroup.problem} · {selectedGroup.registeredAt}</p>
+              <p className="mt-1 text-sm text-kec-secondary">{selectedGroup.problem} - {selectedGroup.registeredAt}</p>
             </div>
             <Badge variant="purple">{selectedGroup.memberCount} members</Badge>
           </div>

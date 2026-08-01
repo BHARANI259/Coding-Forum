@@ -107,8 +107,8 @@ export default function StudentEventDetailPage() {
   }
 
   function requireProblemSelection() {
-    if (problemStatements.length && !selectedProblemId) {
-      setError("Please select a problem statement before registering.");
+    if (selectableProblemStatements.length && !selectedProblemId) {
+      setError(`Please select a ${problemLabel.toLowerCase()} before registering.`);
       return false;
     }
     return true;
@@ -188,10 +188,15 @@ export default function StudentEventDetailPage() {
   const registrationState = event ? getEventRegistrationState(event) : null;
   const eventClosed = Boolean(event && (event.resultsPublished || event.status === "COMPLETED" || event.status === "CANCELLED"));
   const registrationAvailable = Boolean(registrationState?.available && !alreadyRegistered);
+  const isContestCategory = event?.category?.categoryType === "CONTEST";
+  const isDomainCategory = event?.category?.categoryType === "DOMAIN";
+  const problemLabel = isDomainCategory ? "Domain" : "Problem Statement";
+  const problemPluralLabel = isDomainCategory ? "Domains" : "Problem Statements";
+  const selectableProblemStatements = isContestCategory ? [] : problemStatements;
 
   return (
     <AppShell expectedRole="STUDENT" title="Event Detail">
-      <PageHeader title="Event Detail" subtitle="Review the schedule, rounds, problem statements, registration, and results." actions={<BackButton fallbackHref="/student/events" />} />
+      <PageHeader title="Event Detail" subtitle="Review the schedule, rounds, registration, and results." actions={<BackButton fallbackHref="/student/events" />} />
       {error && event ? <p className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       {success ? <p className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</p> : null}
       {!loading && error && !event ? (
@@ -230,16 +235,18 @@ export default function StudentEventDetailPage() {
             />
           </Card>
           <Card>
-            <h2 className="text-base font-bold text-kec-text">Problem Statements</h2>
-            {problemStatements.length ? (
+            <h2 className="text-base font-bold text-kec-text">{problemPluralLabel}</h2>
+            {isContestCategory ? (
+              <p className="mt-2 text-sm text-kec-secondary">This contest does not require a problem statement or domain selection.</p>
+            ) : selectableProblemStatements.length ? (
               <div className="mt-4 space-y-3">
                 {registrationAvailable ? (
-                  <Select label="Select Problem Statement" value={selectedProblemId} onChange={(changeEvent) => setSelectedProblemId(changeEvent.target.value)} required>
-                    <option value="">Choose a problem statement</option>
-                    {problemStatements.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+                  <Select label={`Select ${problemLabel}`} value={selectedProblemId} onChange={(changeEvent) => setSelectedProblemId(changeEvent.target.value)} required>
+                    <option value="">Choose a {problemLabel.toLowerCase()}</option>
+                    {selectableProblemStatements.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
                   </Select>
                 ) : null}
-                {problemStatements.map((item) => (
+                {selectableProblemStatements.map((item) => (
                   <div key={item.id} className="rounded-lg border border-kec-border p-3 text-sm">
                     <p className="break-words font-bold text-kec-text">{item.title}</p>
                     {item.description ? <p className="mt-1 break-words text-kec-secondary">{item.description}</p> : null}
@@ -251,7 +258,7 @@ export default function StudentEventDetailPage() {
                   </div>
                 ))}
               </div>
-            ) : <p className="mt-2 text-sm text-kec-secondary">No problem statement selection required.</p>}
+            ) : <p className="mt-2 text-sm text-kec-secondary">No {problemLabel.toLowerCase()} selection required.</p>}
           </Card>
           <Card>
             <h2 className="text-base font-bold text-kec-text">My Result</h2>
@@ -296,16 +303,16 @@ export default function StudentEventDetailPage() {
                     team.teamCode,
                     `${team.members.length} of ${event.minTeamSize ?? 1} minimum`,
                     team.members.map((member) => member.leader ? `${member.name} (Leader)` : member.name).join(", "),
-                    team.problemStatementTitle ?? (!team.lockedAfterRegistration && team.leaderStudentId === currentStudentId && problemStatements.length ? (
+                    team.problemStatementTitle ?? (!team.lockedAfterRegistration && team.leaderStudentId === currentStudentId && selectableProblemStatements.length ? (
                       <Select
                         key={`problem-${team.id}`}
-                        label="Problem Statement"
+                        label={problemLabel}
                         value={selectedProblemId}
                         onChange={(changeEvent) => setSelectedProblemId(changeEvent.target.value)}
                         required
                       >
-                        <option value="">Select problem</option>
-                        {problemStatements.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+                        <option value="">Select {problemLabel.toLowerCase()}</option>
+                        {selectableProblemStatements.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
                       </Select>
                     ) : !team.lockedAfterRegistration && team.leaderStudentId === currentStudentId ? "Select during enrollment" : "-"),
                     team.registrationStatus,

@@ -469,7 +469,13 @@ public class EventRoundResultService {
     }
 
     private boolean isMarksImportCategory(Event event) {
-        String category = event.getCategory() == null ? "" : event.getCategory().getName().toLowerCase(Locale.ROOT);
+        if (event.getCategory() == null) {
+            return false;
+        }
+        if ("CONTEST".equals(event.getCategory().getCategoryType())) {
+            return true;
+        }
+        String category = event.getCategory().getName().toLowerCase(Locale.ROOT);
         return category.contains("coding") || category.contains("contest") || category.contains("placement") || category.contains("drill");
     }
 

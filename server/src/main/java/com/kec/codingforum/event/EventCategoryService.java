@@ -13,9 +13,12 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 public class EventCategoryService {
+
+    private static final Set<String> CATEGORY_TYPES = Set.of("GENERAL", "CONTEST", "DOMAIN");
 
     private final EventCategoryRepository categories;
 
@@ -39,6 +42,7 @@ public class EventCategoryService {
         EventCategory category = new EventCategory();
         category.setName(name);
         category.setWeightage(validWeightage(request.weightage()));
+        applyPolicy(category, request.categoryType(), request.winnerPoints(), request.runnerUpPoints(), request.secondRunnerUpPoints(), request.participantPoints(), request.disqualifiedPoints(), request.notPresentedPoints());
         category.setActive(request.active() == null || request.active());
         return EventMapper.category(categories.save(category));
     }
@@ -52,9 +56,10 @@ public class EventCategoryService {
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
                     throw new IllegalArgumentException("Event category name already exists.");
-                });
+        });
         category.setName(name);
         category.setWeightage(validWeightage(request.weightage()));
+        applyPolicy(category, request.categoryType(), request.winnerPoints(), request.runnerUpPoints(), request.secondRunnerUpPoints(), request.participantPoints(), request.disqualifiedPoints(), request.notPresentedPoints());
         category.setActive(request.active());
         return EventMapper.category(category);
     }
@@ -88,9 +93,38 @@ public class EventCategoryService {
     }
 
     private BigDecimal validWeightage(BigDecimal value) {
-        if (value == null || value.compareTo(BigDecimal.ZERO) <= 0) {
+        if (value == null) {
+            return BigDecimal.ONE;
+        }
+        if (value.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Weightage must be positive.");
         }
         return value;
+    }
+
+    private void applyPolicy(EventCategory category, String categoryType, Integer winnerPoints, Integer runnerUpPoints, Integer secondRunnerUpPoints, Integer participantPoints, Integer disqualifiedPoints, Integer notPresentedPoints) {
+        category.setCategoryType(validCategoryType(categoryType));
+        category.setWinnerPoints(validPoints(winnerPoints, 100, "Winner points"));
+        category.setRunnerUpPoints(validPoints(runnerUpPoints, 60, "Runner-up points"));
+        category.setSecondRunnerUpPoints(validPoints(secondRunnerUpPoints, 40, "Second runner-up points"));
+        category.setParticipantPoints(validPoints(participantPoints, 10, "Participant points"));
+        category.setDisqualifiedPoints(validPoints(disqualifiedPoints, 0, "Disqualified points"));
+        category.setNotPresentedPoints(validPoints(notPresentedPoints, 0, "Not presented points"));
+    }
+
+    private String validCategoryType(String value) {
+        String normalized = value == null || value.isBlank() ? "GENERAL" : value.trim().toUpperCase(Locale.ROOT);
+        if (!CATEGORY_TYPES.contains(normalized)) {
+            throw new IllegalArgumentException("Category type must be GENERAL, CONTEST, or DOMAIN.");
+        }
+        return normalized;
+    }
+
+    private Integer validPoints(Integer value, int defaultValue, String label) {
+        int points = value == null ? defaultValue : value;
+        if (points < 0) {
+            throw new IllegalArgumentException(label + " cannot be negative.");
+        }
+        return points;
     }
 }

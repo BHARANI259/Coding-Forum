@@ -11,6 +11,9 @@ type EventSummaryProps = {
 
 export default function EventSummary({ event }: EventSummaryProps) {
   const registrationState = getEventRegistrationState(event);
+  const isDomainCategory = event.category?.categoryType === "DOMAIN";
+  const isContestCategory = event.category?.categoryType === "CONTEST";
+  const problemCountLabel = isDomainCategory ? "Domains" : isContestCategory ? "Domains / Problems" : "Problem Statements";
 
   return (
     <Card>
@@ -32,6 +35,7 @@ export default function EventSummary({ event }: EventSummaryProps) {
             </div>
             <div className="flex max-w-full flex-wrap gap-2">
               <Badge variant="purple">{event.eventType === "TEAM" ? "Team" : "Individual"}</Badge>
+              {event.mandatoryEvent ? <Badge variant="warning">Mandatory</Badge> : null}
               <Badge variant={registrationState.badgeVariant}>{registrationState.label}</Badge>
               <Badge variant={event.resultsPublished ? "success" : "default"}>{event.resultsPublished ? "Results Published" : "Results Pending"}</Badge>
               <Badge variant={event.status === "CANCELLED" ? "error" : event.status === "COMPLETED" ? "success" : "info"}>{humanize(event.status)}</Badge>
@@ -54,8 +58,9 @@ export default function EventSummary({ event }: EventSummaryProps) {
             <Info label="Team Size" value={event.eventType === "TEAM" ? `${event.minTeamSize ?? "-"} - ${event.maxTeamSize ?? "-"}` : "Individual"} />
             <Info label="Max Teams" value={event.maxTeams ?? "No limit"} />
             <Info label="Placement Willing Only" value={event.placementWillingOnly ? "Yes" : "No"} />
+            <Info label="Mandatory Event" value={event.mandatoryEvent ? "Yes" : "No"} />
             <Info label="Rounds" value={event.roundsCount} />
-            <Info label="Problem Statements" value={event.problemStatementCount} />
+            <Info label={problemCountLabel} value={event.problemStatementCount} />
           </div>
 
           <div className="mt-5 grid overflow-hidden rounded-xl border border-slate-100 bg-slate-50/70 text-sm sm:grid-cols-2 sm:gap-4 sm:border-0 sm:bg-transparent">

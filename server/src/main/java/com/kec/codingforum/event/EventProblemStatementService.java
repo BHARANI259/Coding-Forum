@@ -97,10 +97,16 @@ public class EventProblemStatementService {
     public List<ProblemStatementDto> studentList(Long eventId, Long studentId) {
         Event event = findEvent(eventId);
         eligibilityService.assertEligibleByStudentId(event, studentId);
+        if (event.getCategory() != null && "CONTEST".equals(event.getCategory().getCategoryType())) {
+            return List.of();
+        }
         return problemStatements.findByEventIdAndActiveTrueOrderByIdAsc(eventId).stream().map(this::toDto).toList();
     }
 
     public EventProblemStatement requireForRegistration(Event event, Long problemStatementId) {
+        if (event.getCategory() != null && "CONTEST".equals(event.getCategory().getCategoryType())) {
+            return null;
+        }
         long activeCount = problemStatements.countByEventIdAndActiveTrue(event.getId());
         if (activeCount == 0) {
             return null;

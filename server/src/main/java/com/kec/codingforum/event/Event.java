@@ -65,6 +65,9 @@ public class Event {
     @Column(name = "placement_willing_only", nullable = false)
     private boolean placementWillingOnly = false;
 
+    @Column(name = "mandatory_event", nullable = false)
+    private boolean mandatoryEvent = false;
+
     @Column(nullable = false)
     private String status = "DRAFT";
 

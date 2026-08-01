@@ -22,6 +22,7 @@ public record EventListItemDto(
         Integer maxParticipants,
         Integer maxTeams,
         List<EventOptionDto> allowedDepartments,
+        boolean mandatoryEvent,
         Set<Integer> allowedYears,
         Set<String> allowedSections,
         List<EventOptionDto> incharges,

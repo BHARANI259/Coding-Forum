@@ -21,7 +21,19 @@ final class EventMapper {
         if (category == null) {
             return null;
         }
-        return new EventCategoryDto(category.getId(), category.getName(), category.getWeightage(), category.isActive());
+        return new EventCategoryDto(
+                category.getId(),
+                category.getName(),
+                category.getWeightage(),
+                category.getCategoryType(),
+                category.getWinnerPoints(),
+                category.getRunnerUpPoints(),
+                category.getSecondRunnerUpPoints(),
+                category.getParticipantPoints(),
+                category.getDisqualifiedPoints(),
+                category.getNotPresentedPoints(),
+                category.isActive()
+        );
     }
 
     static EventListItemDto listItem(Event event, long roundsCount, long problemStatementCount) {
@@ -43,6 +55,7 @@ final class EventMapper {
                 event.getMaxParticipants(),
                 event.getMaxTeams(),
                 departments(event),
+                event.isMandatoryEvent(),
                 sortedYears(event.getAllowedYears()),
                 sortedSections(event.getAllowedSections()),
                 faculties(event),
@@ -76,6 +89,7 @@ final class EventMapper {
                 event.getMaxParticipants(),
                 event.getMaxTeams(),
                 event.isPlacementWillingOnly(),
+                event.isMandatoryEvent(),
                 event.getStatus(),
                 event.getCreatedBy() == null ? null : event.getCreatedBy().getId(),
                 event.getCreatedAt(),

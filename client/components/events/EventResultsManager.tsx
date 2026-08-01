@@ -527,6 +527,9 @@ function formatLabel(value: string) {
 }
 
 function isMarksImportEvent(event: EventDetail) {
+  if (event.category?.categoryType === "CONTEST") {
+    return true;
+  }
   const categoryName = event.category?.name?.toLowerCase() ?? "";
   return categoryName.includes("coding") || categoryName.includes("contest") || categoryName.includes("placement") || categoryName.includes("drill");
 }

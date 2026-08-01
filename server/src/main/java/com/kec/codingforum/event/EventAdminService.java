@@ -211,6 +211,7 @@ public class EventAdminService {
                 request.maxParticipants(),
                 request.maxTeams(),
                 request.placementWillingOnly(),
+                request.mandatoryEvent(),
                 request.status(),
                 request.allowedDepartmentIds(),
                 request.allowedYears(),
@@ -238,6 +239,7 @@ public class EventAdminService {
                 request.maxParticipants(),
                 request.maxTeams(),
                 request.placementWillingOnly(),
+                request.mandatoryEvent(),
                 request.status(),
                 request.allowedDepartmentIds(),
                 request.allowedYears(),
@@ -264,6 +266,7 @@ public class EventAdminService {
             Integer maxParticipants,
             Integer maxTeams,
             boolean placementWillingOnly,
+            boolean mandatoryEvent,
             String status,
             List<Long> allowedDepartmentIds,
             List<Integer> allowedYears,
@@ -288,6 +291,7 @@ public class EventAdminService {
         event.setRegistrationEnd(registrationEnd);
         event.setMaxParticipants(maxParticipants);
         event.setPlacementWillingOnly(placementWillingOnly);
+        event.setMandatoryEvent(mandatoryEvent && "CONTEST".equals(event.getCategory().getCategoryType()));
         String normalizedStatus = validStatus(status, true);
         if (event.getId() != null && !event.getStatus().equals(normalizedStatus)) {
             if ("COMPLETED".equals(normalizedStatus) || "CANCELLED".equals(normalizedStatus)) {

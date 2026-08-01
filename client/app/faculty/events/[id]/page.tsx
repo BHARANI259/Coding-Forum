@@ -94,6 +94,9 @@ export default function FacultyEventDetailPage() {
 
   const eventClosed = Boolean(event && (event.resultsPublished || event.status === "COMPLETED" || event.status === "CANCELLED"));
   const eventActive = Boolean(event && !eventClosed && (event.status === "PUBLISHED" || event.status === "ONGOING"));
+  const isContestCategory = event?.category?.categoryType === "CONTEST";
+  const isDomainCategory = event?.category?.categoryType === "DOMAIN";
+  const problemPluralLabel = isDomainCategory ? "Domains" : "Problem Statements";
 
   return (
     <AppShell expectedRole="FACULTY" title="Assigned Event Detail">
@@ -129,21 +132,25 @@ export default function FacultyEventDetailPage() {
             </div>
           </Card>
           <Card>
-            <h2 className="text-base font-bold text-kec-text">Problem Statements</h2>
-            <DataTable
-              headers={["Title", "Description", "Links", "Status"]}
-              rows={problemStatements.map((item) => [
-                item.title,
-                item.description ?? "-",
-                item.links.length ? (
-                  <div key="links" className="flex flex-wrap gap-2">
-                    {item.links.map((link) => <a key={`${link.id}-${link.url}`} className="rounded-full bg-kec-purple/10 px-3 py-1 text-xs font-semibold text-kec-purple" href={link.url} target="_blank" rel="noopener noreferrer">{link.label || shortUrl(link.url)}</a>)}
-                  </div>
-                ) : "-",
-                item.active ? "Active" : "Inactive"
-              ])}
-              emptyMessage="No problem statements."
-            />
+            <h2 className="text-base font-bold text-kec-text">{problemPluralLabel}</h2>
+            {isContestCategory ? (
+              <p className="mt-2 text-sm text-kec-secondary">This contest does not use domain or problem statement selection. Use the result page to import Codetantra marks.</p>
+            ) : (
+              <DataTable
+                headers={["Title", "Description", "Links", "Status"]}
+                rows={problemStatements.map((item) => [
+                  item.title,
+                  item.description ?? "-",
+                  item.links.length ? (
+                    <div key="links" className="flex flex-wrap gap-2">
+                      {item.links.map((link) => <a key={`${link.id}-${link.url}`} className="rounded-full bg-kec-purple/10 px-3 py-1 text-xs font-semibold text-kec-purple" href={link.url} target="_blank" rel="noopener noreferrer">{link.label || shortUrl(link.url)}</a>)}
+                    </div>
+                  ) : "-",
+                  item.active ? "Active" : "Inactive"
+                ])}
+                emptyMessage={`No ${problemPluralLabel.toLowerCase()}.`}
+              />
+            )}
           </Card>
           <Card>
             <h2 className="text-base font-bold text-kec-text">Rounds</h2>

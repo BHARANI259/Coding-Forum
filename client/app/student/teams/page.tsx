@@ -85,7 +85,7 @@ export default function StudentTeamsPage() {
     const problems = problemStatementsByEvent[eventId] ?? [];
     const selectedProblemId = selectedProblemByTeam[team.id] ? Number(selectedProblemByTeam[team.id]) : null;
     if (problems.length && !selectedProblemId) {
-      setError("Please select a problem statement before enrolling this team.");
+      setError("Please select a problem/domain before enrolling this team.");
       return;
     }
     setError("");
@@ -143,15 +143,15 @@ export default function StudentTeamsPage() {
               team.problemStatementTitle ?? (leader && !team.lockedAfterRegistration && problems.length ? (
                 <Select
                   key={`problem-${team.id}`}
-                  label="Problem Statement"
+                  label="Problem / Domain"
                   value={selectedProblemByTeam[team.id] ?? ""}
                   onChange={(event) => setSelectedProblemByTeam((current) => ({ ...current, [team.id]: event.target.value }))}
                   required
                 >
-                  <option value="">Select problem</option>
+                  <option value="">Select problem/domain</option>
                   {problems.map((problem) => <option key={problem.id} value={problem.id}>{problem.title}</option>)}
                 </Select>
-              ) : leader && !team.lockedAfterRegistration ? "Select during enrollment" : "-"),
+              ) : leader && !team.lockedAfterRegistration && problems.length ? "Select during enrollment" : "-"),
               team.members.map((member) => member.leader ? `${member.name} (Leader)` : member.name).join(", "),
               <Badge key="status" variant={team.lockedAfterRegistration ? "success" : "warning"}>{team.lockedAfterRegistration ? "Registered" : "Open"}</Badge>,
               <div key="actions" className="grid gap-2 sm:flex sm:flex-wrap">

@@ -29,7 +29,27 @@ public class EventCategory {
     @Column(nullable = false)
     private BigDecimal weightage = BigDecimal.ONE;
 
+    @Column(name = "category_type", nullable = false)
+    private String categoryType = "GENERAL";
+
+    @Column(name = "winner_points", nullable = false)
+    private Integer winnerPoints = 100;
+
+    @Column(name = "runner_up_points", nullable = false)
+    private Integer runnerUpPoints = 60;
+
+    @Column(name = "second_runner_up_points", nullable = false)
+    private Integer secondRunnerUpPoints = 40;
+
+    @Column(name = "participant_points", nullable = false)
+    private Integer participantPoints = 10;
+
+    @Column(name = "disqualified_points", nullable = false)
+    private Integer disqualifiedPoints = 0;
+
+    @Column(name = "not_presented_points", nullable = false)
+    private Integer notPresentedPoints = 0;
+
     @Column(nullable = false)
     private boolean active = true;
 }
-

@@ -1,14 +1,21 @@
 package com.kec.codingforum.event.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 
 public record UpdateEventCategoryRequest(
         @NotBlank String name,
-        @NotNull @DecimalMin(value = "0.01") BigDecimal weightage,
+        @DecimalMin(value = "0.01") BigDecimal weightage,
+        String categoryType,
+        @Min(0) Integer winnerPoints,
+        @Min(0) Integer runnerUpPoints,
+        @Min(0) Integer secondRunnerUpPoints,
+        @Min(0) Integer participantPoints,
+        @Min(0) Integer disqualifiedPoints,
+        @Min(0) Integer notPresentedPoints,
         boolean active
 ) {
 }
