@@ -7,7 +7,6 @@ import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
-import DataTable from "@/components/ui/DataTable";
 import Badge from "@/components/ui/Badge";
 import BackButton from "@/components/ui/BackButton";
 import { createEventCategory, getEventCategories, updateEventCategory, updateEventCategoryStatus, type EventCategory } from "@/lib/api";
@@ -142,20 +141,37 @@ export default function AdminCategoriesPage() {
             <Input label="Search" value={search} onChange={(event) => setSearch(event.target.value)} />
           </Card>
           {loading ? <Card>Loading categories...</Card> : (
-            <DataTable
-              headers={["Name", "Workflow", "Points", "Status", "Actions"]}
-              rows={categories.map((category) => [
-                category.name,
-                formatWorkflow(category.categoryType),
-                `W ${category.winnerPoints} / R ${category.runnerUpPoints} / SR ${category.secondRunnerUpPoints} / P ${category.participantPoints}`,
-                <Badge key="status" variant={category.active ? "success" : "warning"}>{category.active ? "Active" : "Inactive"}</Badge>,
-                <div key="actions" className="flex gap-2">
-                  <Button type="button" variant="secondary" onClick={() => startEdit(category)}>Edit</Button>
-                  <Button type="button" variant={category.active ? "danger" : "secondary"} onClick={() => void toggleStatus(category)}>{category.active ? "Deactivate" : "Activate"}</Button>
+            <Card className="p-0">
+              {categories.length ? (
+                <div className="divide-y divide-kec-border">
+                  {categories.map((category) => (
+                    <div key={category.id} className="p-4">
+                      <div className="grid gap-3 lg:grid-cols-[minmax(140px,1.1fr)_minmax(170px,1fr)_minmax(220px,1.6fr)_auto] lg:items-start">
+                        <CategoryField label="Name" value={category.name} strong />
+                        <CategoryField label="Workflow" value={formatWorkflow(category.categoryType)} />
+                        <CategoryField label="Points" value={formatPoints(category)} />
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-kec-muted">Status</p>
+                          <div className="mt-1">
+                            <Badge variant={category.active ? "success" : "warning"}>{category.active ? "Active" : "Inactive"}</Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-col gap-2 border-t border-kec-border pt-3 sm:flex-row sm:justify-end">
+                        <Button type="button" className="w-full sm:w-auto" variant="secondary" onClick={() => startEdit(category)}>Edit</Button>
+                        <Button type="button" className="w-full sm:w-auto" variant={category.active ? "danger" : "secondary"} onClick={() => void toggleStatus(category)}>
+                          {category.active ? "Deactivate" : "Activate"}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ])}
-              emptyMessage="No categories found."
-            />
+              ) : (
+                <div className="px-4 py-10 text-center">
+                  <p className="text-sm font-semibold text-kec-secondary">No categories found.</p>
+                </div>
+              )}
+            </Card>
           )}
         </div>
       </div>
@@ -182,4 +198,21 @@ function formatWorkflow(value: string) {
   if (value === "CONTEST") return "Contest / Placement drill";
   if (value === "DOMAIN") return "Paper / Project domain";
   return "General event";
+}
+
+function formatPoints(category: EventCategory) {
+  const winner = category.winnerPoints ?? 100;
+  const runnerUp = category.runnerUpPoints ?? 60;
+  const secondRunnerUp = category.secondRunnerUpPoints ?? 40;
+  const participant = category.participantPoints ?? 10;
+  return `Winner ${winner} / Runner-up ${runnerUp} / Second ${secondRunnerUp} / Participant ${participant}`;
+}
+
+function CategoryField({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs font-bold uppercase tracking-wide text-kec-muted">{label}</p>
+      <p className={`mt-1 break-words text-sm ${strong ? "font-bold text-kec-text" : "font-medium text-kec-secondary"}`}>{value}</p>
+    </div>
+  );
 }
