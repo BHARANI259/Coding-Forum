@@ -141,7 +141,7 @@ export default function AdminCategoriesPage() {
             <Input label="Search" value={search} onChange={(event) => setSearch(event.target.value)} />
           </Card>
           {loading ? <Card>Loading categories...</Card> : (
-            <Card className="p-0">
+            <Card className="max-h-[640px] overflow-y-auto p-0 lg:max-h-[calc(100dvh-300px)]">
               {categories.length ? (
                 <div className="space-y-3 p-3">
                   {categories.map((category) => (
