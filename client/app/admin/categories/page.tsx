@@ -143,21 +143,26 @@ export default function AdminCategoriesPage() {
           {loading ? <Card>Loading categories...</Card> : (
             <Card className="p-0">
               {categories.length ? (
-                <div className="divide-y divide-kec-border">
+                <div className="space-y-3 p-3">
                   {categories.map((category) => (
-                    <div key={category.id} className="p-4">
-                      <div className="grid gap-3 lg:grid-cols-[minmax(140px,1.1fr)_minmax(170px,1fr)_minmax(220px,1.6fr)_auto] lg:items-start">
-                        <CategoryField label="Name" value={category.name} strong />
+                    <div key={category.id} className="rounded-xl border border-kec-border bg-white p-4 shadow-sm">
+                      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold uppercase tracking-wide text-kec-muted">Name</p>
+                          <h3 className="mt-1 break-words text-base font-bold text-kec-text">{category.name}</h3>
+                        </div>
+                        <Badge variant={category.active ? "success" : "warning"}>{category.active ? "Active" : "Inactive"}</Badge>
+                      </div>
+
+                      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(150px,0.8fr)_minmax(0,1.8fr)]">
                         <CategoryField label="Workflow" value={formatWorkflow(category.categoryType)} />
-                        <CategoryField label="Points" value={formatPoints(category)} />
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-wide text-kec-muted">Status</p>
-                          <div className="mt-1">
-                            <Badge variant={category.active ? "success" : "warning"}>{category.active ? "Active" : "Inactive"}</Badge>
-                          </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold uppercase tracking-wide text-kec-muted">Points</p>
+                          <CategoryPoints category={category} />
                         </div>
                       </div>
-                      <div className="mt-4 flex flex-col gap-2 border-t border-kec-border pt-3 sm:flex-row sm:justify-end">
+
+                      <div className="mt-4 grid gap-2 border-t border-kec-border pt-3 sm:grid-cols-2 xl:flex xl:justify-end">
                         <Button type="button" className="w-full sm:w-auto" variant="secondary" onClick={() => startEdit(category)}>Edit</Button>
                         <Button type="button" className="w-full sm:w-auto" variant={category.active ? "danger" : "secondary"} onClick={() => void toggleStatus(category)}>
                           {category.active ? "Deactivate" : "Activate"}
@@ -200,19 +205,32 @@ function formatWorkflow(value: string) {
   return "General event";
 }
 
-function formatPoints(category: EventCategory) {
-  const winner = category.winnerPoints ?? 100;
-  const runnerUp = category.runnerUpPoints ?? 60;
-  const secondRunnerUp = category.secondRunnerUpPoints ?? 40;
-  const participant = category.participantPoints ?? 10;
-  return `Winner ${winner} / Runner-up ${runnerUp} / Second ${secondRunnerUp} / Participant ${participant}`;
-}
-
 function CategoryField({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="min-w-0">
       <p className="text-xs font-bold uppercase tracking-wide text-kec-muted">{label}</p>
       <p className={`mt-1 break-words text-sm ${strong ? "font-bold text-kec-text" : "font-medium text-kec-secondary"}`}>{value}</p>
+    </div>
+  );
+}
+
+function CategoryPoints({ category }: { category: EventCategory }) {
+  const values = [
+    ["Winner", category.winnerPoints ?? 100],
+    ["Runner-up", category.runnerUpPoints ?? 60],
+    ["Second", category.secondRunnerUpPoints ?? 40],
+    ["Participant", category.participantPoints ?? 10],
+    ["Disqualified", category.disqualifiedPoints ?? 0],
+    ["Not presented", category.notPresentedPoints ?? 0]
+  ];
+
+  return (
+    <div className="mt-2 flex max-w-full flex-wrap gap-2">
+      {values.map(([label, value]) => (
+        <span key={label} className="rounded-full bg-kec-purple/10 px-3 py-1 text-xs font-semibold text-kec-purple">
+          {label}: {value}
+        </span>
+      ))}
     </div>
   );
 }

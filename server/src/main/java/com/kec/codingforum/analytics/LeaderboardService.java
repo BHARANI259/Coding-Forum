@@ -18,11 +18,11 @@ public class LeaderboardService {
         this.jdbc = jdbc;
     }
 
-    public PageDto<StudentLeaderboardRowDto> studentLeaderboard(int page, int size, Long departmentId, Long categoryId, String search) {
+    public PageDto<StudentLeaderboardRowDto> studentLeaderboard(int page, int size, Long departmentId, Long categoryId, Integer year, String search) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
         List<Object> params = new ArrayList<>();
-        String where = studentWhere(departmentId, categoryId, search, params);
+        String where = studentWhere(departmentId, categoryId, year, search, params);
         Long total = jdbc.queryForObject("select count(*) from students s left join departments d on d.id=s.department_id where s.active=true" + where, Long.class, params.toArray());
         params.add(safeSize);
         params.add(safePage * safeSize);
@@ -89,7 +89,7 @@ public class LeaderboardService {
     }
 
     public PageDto<StudentLeaderboardRowDto> categoryStudentLeaderboard(Long categoryId, int page, int size) {
-        return studentLeaderboard(page, size, null, categoryId, null);
+        return studentLeaderboard(page, size, null, categoryId, null, null);
     }
 
     public PageDto<StudentLeaderboardRowDto> bestCoders(int page, int size) {
@@ -137,11 +137,15 @@ public class LeaderboardService {
         return new PageDto<>(rows, safePage, safeSize, rows.size());
     }
 
-    private String studentWhere(Long departmentId, Long categoryId, String search, List<Object> params) {
+    private String studentWhere(Long departmentId, Long categoryId, Integer year, String search, List<Object> params) {
         StringBuilder where = new StringBuilder();
         if (departmentId != null) {
             where.append(" and s.department_id=?");
             params.add(departmentId);
+        }
+        if (year != null) {
+            where.append(" and s.year=?");
+            params.add(year);
         }
         if (search != null && !search.isBlank()) {
             where.append(" and (lower(s.name) like ? or lower(s.register_number) like ?)");

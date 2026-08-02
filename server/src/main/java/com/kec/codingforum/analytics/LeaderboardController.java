@@ -22,8 +22,8 @@ public class LeaderboardController {
     }
 
     @GetMapping("/students")
-    public PageDto<StudentLeaderboardRowDto> students(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Long departmentId, @RequestParam(required = false) Long categoryId, @RequestParam(required = false) String search) {
-        return leaderboardService.studentLeaderboard(page, size, departmentId, categoryId, search);
+    public PageDto<StudentLeaderboardRowDto> students(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Long departmentId, @RequestParam(required = false) Long categoryId, @RequestParam(required = false) Integer year, @RequestParam(required = false) String search) {
+        return leaderboardService.studentLeaderboard(page, size, departmentId, categoryId, year, search);
     }
 
     @GetMapping("/departments")
