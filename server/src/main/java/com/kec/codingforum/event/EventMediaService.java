@@ -2,6 +2,7 @@ package com.kec.codingforum.event;
 
 import com.kec.codingforum.event.dto.EventMediaDto;
 import com.kec.codingforum.event.dto.UpdateEventMediaRequest;
+import com.kec.codingforum.security.FileSignatureValidator;
 import com.kec.codingforum.user.User;
 import com.kec.codingforum.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -259,6 +260,9 @@ public class EventMediaService {
         String originalName = safeOriginalName(file.getOriginalFilename()).toLowerCase(Locale.ROOT);
         if (!(originalName.endsWith(".jpg") || originalName.endsWith(".jpeg") || originalName.endsWith(".png") || originalName.endsWith(".webp"))) {
             throw new IllegalArgumentException("Event media extension must be JPG, PNG, or WEBP.");
+        }
+        if (!FileSignatureValidator.hasExpectedImageSignature(file, contentType)) {
+            throw new IllegalArgumentException("Event media content does not match a supported JPG, PNG, or WEBP file.");
         }
     }
 

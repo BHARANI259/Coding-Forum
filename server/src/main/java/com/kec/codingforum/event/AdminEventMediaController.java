@@ -1,5 +1,6 @@
 package com.kec.codingforum.event;
 
+import com.kec.codingforum.audit.AuditService;
 import com.kec.codingforum.event.dto.EventMediaDto;
 import com.kec.codingforum.event.dto.UpdateEventMediaRequest;
 import com.kec.codingforum.security.SecurityUtils;
@@ -27,9 +28,11 @@ import java.util.List;
 public class AdminEventMediaController {
 
     private final EventMediaService service;
+    private final AuditService auditService;
 
-    public AdminEventMediaController(EventMediaService service) {
+    public AdminEventMediaController(EventMediaService service, AuditService auditService) {
         this.service = service;
+        this.auditService = auditService;
     }
 
     @GetMapping
@@ -44,17 +47,22 @@ public class AdminEventMediaController {
             @RequestParam(required = false) String mediaType,
             @RequestParam(required = false) String caption
     ) {
-        return service.adminUpload(eventId, SecurityUtils.getCurrentUserId(), files, mediaType, caption);
+        List<EventMediaDto> uploaded = service.adminUpload(eventId, SecurityUtils.getCurrentUserId(), files, mediaType, caption);
+        auditService.record("EVENT_MEDIA_UPLOADED", "EVENT", eventId, AuditService.SUCCESS, "Admin uploaded " + uploaded.size() + " event media file(s).");
+        return uploaded;
     }
 
     @PatchMapping("/{mediaId}")
     public EventMediaDto update(@PathVariable Long eventId, @PathVariable Long mediaId, @RequestBody UpdateEventMediaRequest request) {
-        return service.adminUpdate(eventId, mediaId, request);
+        EventMediaDto media = service.adminUpdate(eventId, mediaId, request);
+        auditService.record("EVENT_MEDIA_UPDATED", "EVENT_MEDIA", mediaId, AuditService.SUCCESS, "Admin updated event media metadata.");
+        return media;
     }
 
     @DeleteMapping("/{mediaId}")
     public ResponseEntity<Void> delete(@PathVariable Long eventId, @PathVariable Long mediaId) {
         service.adminDelete(eventId, mediaId, SecurityUtils.getCurrentUserId());
+        auditService.record("EVENT_MEDIA_DELETED", "EVENT_MEDIA", mediaId, AuditService.SUCCESS, "Admin deleted event media.");
         return ResponseEntity.noContent().build();
     }
 

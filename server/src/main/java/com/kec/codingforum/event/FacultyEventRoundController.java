@@ -1,5 +1,6 @@
 package com.kec.codingforum.event;
 
+import com.kec.codingforum.audit.AuditService;
 import com.kec.codingforum.event.dto.EventRoundDto;
 import com.kec.codingforum.event.dto.UpdateRoundStatusRequest;
 import com.kec.codingforum.security.SecurityUtils;
@@ -21,10 +22,12 @@ public class FacultyEventRoundController {
 
     private final EventRoundService service;
     private final EventRoundResultService roundResultService;
+    private final AuditService auditService;
 
-    public FacultyEventRoundController(EventRoundService service, EventRoundResultService roundResultService) {
+    public FacultyEventRoundController(EventRoundService service, EventRoundResultService roundResultService, AuditService auditService) {
         this.service = service;
         this.roundResultService = roundResultService;
+        this.auditService = auditService;
     }
 
     @GetMapping
@@ -34,18 +37,22 @@ public class FacultyEventRoundController {
 
     @PatchMapping("/{roundId}/status")
     public EventRoundDto status(@PathVariable Long eventId, @PathVariable Long roundId, @RequestBody UpdateRoundStatusRequest request) {
-        return service.facultyUpdateStatus(eventId, SecurityUtils.getCurrentFacultyId(), roundId, request.status());
+        EventRoundDto round = service.facultyUpdateStatus(eventId, SecurityUtils.getCurrentFacultyId(), roundId, request.status());
+        auditService.record("FACULTY_ROUND_STATUS_UPDATED", "ROUND", roundId, AuditService.SUCCESS, "Faculty updated assigned round status to " + request.status() + ".");
+        return round;
     }
 
     @PostMapping("/{roundId}/publish-round-result")
     public void publishRoundResult(@PathVariable Long eventId, @PathVariable Long roundId) {
         roundResultService.requireAssigned(eventId, SecurityUtils.getCurrentFacultyId());
         roundResultService.publishRoundResult(eventId, roundId, SecurityUtils.getCurrentUserId());
+        auditService.record("FACULTY_ROUND_RESULT_PUBLISHED", "ROUND", roundId, AuditService.SUCCESS, "Faculty published assigned non-final round result.");
     }
 
     @PostMapping("/{roundId}/publish-final-result")
     public void publishFinalResult(@PathVariable Long eventId, @PathVariable Long roundId) {
         roundResultService.requireAssigned(eventId, SecurityUtils.getCurrentFacultyId());
         roundResultService.publishFinalResult(eventId, roundId, SecurityUtils.getCurrentUserId());
+        auditService.record("FACULTY_FINAL_RESULT_PUBLISHED", "ROUND", roundId, AuditService.SUCCESS, "Faculty published assigned final result.");
     }
 }

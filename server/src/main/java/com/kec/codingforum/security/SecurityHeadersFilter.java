@@ -13,12 +13,21 @@ import java.io.IOException;
 @Component
 public class SecurityHeadersFilter extends OncePerRequestFilter {
 
+    private final String csp;
     private final String cspReportOnly;
+    private final boolean cspEnforced;
+    private final boolean hstsEnabled;
 
     public SecurityHeadersFilter(
-            @Value("${app.security.csp-report-only:default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'}") String cspReportOnly
+            @Value("${app.security.csp:default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'}") String csp,
+            @Value("${app.security.csp-report-only:default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'}") String cspReportOnly,
+            @Value("${app.security.csp-enforced:false}") boolean cspEnforced,
+            @Value("${app.security.hsts-enabled:true}") boolean hstsEnabled
     ) {
+        this.csp = csp;
         this.cspReportOnly = cspReportOnly;
+        this.cspEnforced = cspEnforced;
+        this.hstsEnabled = hstsEnabled;
     }
 
     @Override
@@ -31,7 +40,15 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         response.setHeader("X-Frame-Options", "DENY");
         response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
         response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-        response.setHeader("Content-Security-Policy-Report-Only", cspReportOnly);
+        response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+        if (cspEnforced) {
+            response.setHeader("Content-Security-Policy", csp);
+        } else {
+            response.setHeader("Content-Security-Policy-Report-Only", cspReportOnly);
+        }
+        if (hstsEnabled && isHttps(request)) {
+            response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+        }
 
         if (request.getRequestURI().startsWith("/api/")) {
             response.setHeader("Cache-Control", "no-store");
@@ -39,5 +56,10 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isHttps(HttpServletRequest request) {
+        String forwardedProto = request.getHeader("X-Forwarded-Proto");
+        return request.isSecure() || "https".equalsIgnoreCase(forwardedProto);
     }
 }

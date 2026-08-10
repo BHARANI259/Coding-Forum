@@ -8,6 +8,7 @@ import com.kec.codingforum.admin.util.ExcelImportUtil;
 import com.kec.codingforum.admin.util.ImportRow;
 import com.kec.codingforum.department.Department;
 import com.kec.codingforum.department.DepartmentRepository;
+import com.kec.codingforum.security.FileSignatureValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -68,6 +69,9 @@ public class FacultyImportService {
             throw new IllegalArgumentException("Import file must be 5 MB or smaller.");
         }
         String filename = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
+        if (!FileSignatureValidator.hasExpectedSpreadsheetSignature(file, filename)) {
+            throw new IllegalArgumentException("Import file content must match CSV or XLSX format.");
+        }
         try {
             if (filename.endsWith(".xlsx")) {
                 return ExcelImportUtil.read(file.getInputStream());

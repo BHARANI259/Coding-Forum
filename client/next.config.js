@@ -4,6 +4,7 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 });
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+const isProduction = process.env.NODE_ENV === "production";
 let apiOrigin = "http://localhost:8080";
 try {
   apiOrigin = new URL(apiUrl).origin;
@@ -12,7 +13,11 @@ try {
 }
 
 const wsOrigin = apiOrigin.replace(/^http/, "ws");
-const cspReportOnly = [
+const connectSources = ["'self'", apiOrigin, wsOrigin];
+if (!isProduction) {
+  connectSources.push("http://localhost:8080", "ws://localhost:8080");
+}
+const csp = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
@@ -24,7 +29,7 @@ const cspReportOnly = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self' ${apiOrigin} ${wsOrigin} http://localhost:8080 ws://localhost:8080 https://coding-forum-rfay.onrender.com wss://coding-forum-rfay.onrender.com`,
+  `connect-src ${connectSources.join(" ")}`,
   "frame-src 'none'",
   "upgrade-insecure-requests",
 ].join("; ");
@@ -47,8 +52,16 @@ const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=()",
   },
   {
-    key: "Content-Security-Policy-Report-Only",
-    value: cspReportOnly,
+    key: isProduction ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only",
+    value: csp,
+  },
+  {
+    key: "Cross-Origin-Opener-Policy",
+    value: "same-origin",
+  },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains; preload",
   },
 ];
 

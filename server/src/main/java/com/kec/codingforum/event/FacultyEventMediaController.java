@@ -1,5 +1,6 @@
 package com.kec.codingforum.event;
 
+import com.kec.codingforum.audit.AuditService;
 import com.kec.codingforum.event.dto.EventMediaDto;
 import com.kec.codingforum.event.dto.UpdateEventMediaRequest;
 import com.kec.codingforum.security.SecurityUtils;
@@ -27,9 +28,11 @@ import java.util.List;
 public class FacultyEventMediaController {
 
     private final EventMediaService service;
+    private final AuditService auditService;
 
-    public FacultyEventMediaController(EventMediaService service) {
+    public FacultyEventMediaController(EventMediaService service, AuditService auditService) {
         this.service = service;
+        this.auditService = auditService;
     }
 
     @GetMapping
@@ -44,17 +47,22 @@ public class FacultyEventMediaController {
             @RequestParam(required = false) String mediaType,
             @RequestParam(required = false) String caption
     ) {
-        return service.facultyUpload(eventId, SecurityUtils.getCurrentFacultyId(), SecurityUtils.getCurrentUserId(), files, mediaType, caption);
+        List<EventMediaDto> uploaded = service.facultyUpload(eventId, SecurityUtils.getCurrentFacultyId(), SecurityUtils.getCurrentUserId(), files, mediaType, caption);
+        auditService.record("FACULTY_EVENT_MEDIA_UPLOADED", "EVENT", eventId, AuditService.SUCCESS, "Faculty uploaded " + uploaded.size() + " event media file(s).");
+        return uploaded;
     }
 
     @PatchMapping("/{mediaId}")
     public EventMediaDto update(@PathVariable Long eventId, @PathVariable Long mediaId, @RequestBody UpdateEventMediaRequest request) {
-        return service.facultyUpdate(eventId, SecurityUtils.getCurrentFacultyId(), SecurityUtils.getCurrentUserId(), mediaId, request);
+        EventMediaDto media = service.facultyUpdate(eventId, SecurityUtils.getCurrentFacultyId(), SecurityUtils.getCurrentUserId(), mediaId, request);
+        auditService.record("FACULTY_EVENT_MEDIA_UPDATED", "EVENT_MEDIA", mediaId, AuditService.SUCCESS, "Faculty updated own event media metadata.");
+        return media;
     }
 
     @DeleteMapping("/{mediaId}")
     public ResponseEntity<Void> delete(@PathVariable Long eventId, @PathVariable Long mediaId) {
         service.facultyDelete(eventId, SecurityUtils.getCurrentFacultyId(), SecurityUtils.getCurrentUserId(), mediaId);
+        auditService.record("FACULTY_EVENT_MEDIA_DELETED", "EVENT_MEDIA", mediaId, AuditService.SUCCESS, "Faculty deleted own event media.");
         return ResponseEntity.noContent().build();
     }
 

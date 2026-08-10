@@ -51,6 +51,8 @@ app:
   jwt:
     secret: ${JWT_SECRET:dev-only-auth-secret-change-me-please-32-bytes-minimum}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:120}
+    issuer: ${JWT_ISSUER:kec-coding-forum}
+    audience: ${JWT_AUDIENCE:kec-coding-forum-web}
   notifications:
     email-enabled: ${NOTIFICATION_EMAIL_ENABLED:false}
     websocket-enabled: ${NOTIFICATION_WEBSOCKET_ENABLED:true}
@@ -66,10 +68,29 @@ app:
     event-posters-dir: ${EVENT_POSTERS_DIR:event-posters}
     event-media-dir: ${EVENT_MEDIA_DIR:event-media}
   security:
+    fail-on-default-secrets: ${FAIL_ON_DEFAULT_SECRETS:false}
+    csp: ${CSP:default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'}
     csp-report-only: ${CSP_REPORT_ONLY:default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'}
+    csp-enforced: ${CSP_ENFORCED:false}
+    hsts-enabled: ${HSTS_ENABLED:true}
+    request:
+      block-suspicious: ${REQUEST_SECURITY_BLOCK_SUSPICIOUS:true}
+      max-query-length: ${REQUEST_SECURITY_MAX_QUERY_LENGTH:2048}
+      max-user-agent-length: ${REQUEST_SECURITY_MAX_USER_AGENT_LENGTH:500}
+    account-lockout:
+      max-failed-attempts: ${ACCOUNT_LOCKOUT_MAX_FAILED_ATTEMPTS:5}
+      lock-minutes: ${ACCOUNT_LOCKOUT_MINUTES:15}
     rate-limit:
       enabled: ${RATE_LIMIT_ENABLED:true}
       login-max-attempts: ${RATE_LIMIT_LOGIN_MAX_ATTEMPTS:12}
       login-window-seconds: ${RATE_LIMIT_LOGIN_WINDOW_SECONDS:60}
       password-max-attempts: ${RATE_LIMIT_PASSWORD_MAX_ATTEMPTS:5}
       password-window-seconds: ${RATE_LIMIT_PASSWORD_WINDOW_SECONDS:300}
+      upload-max-attempts: ${RATE_LIMIT_UPLOAD_MAX_ATTEMPTS:20}
+      upload-window-seconds: ${RATE_LIMIT_UPLOAD_WINDOW_SECONDS:600}
+      report-max-attempts: ${RATE_LIMIT_REPORT_MAX_ATTEMPTS:30}
+      report-window-seconds: ${RATE_LIMIT_REPORT_WINDOW_SECONDS:600}
+      mutation-max-attempts: ${RATE_LIMIT_MUTATION_MAX_ATTEMPTS:120}
+      mutation-window-seconds: ${RATE_LIMIT_MUTATION_WINDOW_SECONDS:60}
+      push-max-attempts: ${RATE_LIMIT_PUSH_MAX_ATTEMPTS:10}
+      push-window-seconds: ${RATE_LIMIT_PUSH_WINDOW_SECONDS:600}

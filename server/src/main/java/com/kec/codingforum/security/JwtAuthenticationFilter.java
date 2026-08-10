@@ -38,6 +38,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             Claims claims = jwtService.parseClaims(header.substring(7));
             CustomUserPrincipal principal = (CustomUserPrincipal) userDetailsService.loadUserByUsername(claims.getSubject());
+            Object tokenUserId = claims.get("userId");
+            Object tokenRole = claims.get("role");
+            if (!String.valueOf(principal.getUserId()).equals(String.valueOf(tokenUserId))
+                    || !principal.getRole().equals(String.valueOf(tokenRole))) {
+                SecurityContextHolder.clearContext();
+                filterChain.doFilter(request, response);
+                return;
+            }
             var authentication = new UsernamePasswordAuthenticationToken(
                     principal,
                     null,
@@ -51,4 +59,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
-

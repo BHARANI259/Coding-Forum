@@ -1,5 +1,6 @@
 package com.kec.codingforum.event;
 
+import com.kec.codingforum.audit.AuditService;
 import com.kec.codingforum.event.dto.AssignEventInchargeRequest;
 import com.kec.codingforum.event.dto.BulkUpdateEventInchargesRequest;
 import com.kec.codingforum.event.dto.EventInchargeDto;
@@ -31,6 +32,7 @@ import java.util.List;
 public class AdminEventInchargeController {
 
     private final EventInchargeService eventInchargeService;
+    private final AuditService auditService;
 
     @GetMapping("/event-incharges")
     public Page<EventInchargeDto> list(
@@ -60,21 +62,28 @@ public class AdminEventInchargeController {
 
     @PostMapping("/events/{eventId}/incharges")
     public EventInchargeDto assign(@PathVariable Long eventId, @Valid @RequestBody AssignEventInchargeRequest request) {
-        return eventInchargeService.assign(eventId, request);
+        EventInchargeDto assignment = eventInchargeService.assign(eventId, request);
+        auditService.record("EVENT_INCHARGE_ASSIGNED", "EVENT_INCHARGE", assignment.assignmentId(), AuditService.SUCCESS, "Admin assigned faculty incharge.");
+        return assignment;
     }
 
     @PutMapping("/events/{eventId}/incharges")
     public List<EventInchargeDto> replace(@PathVariable Long eventId, @Valid @RequestBody BulkUpdateEventInchargesRequest request) {
-        return eventInchargeService.replace(eventId, request);
+        List<EventInchargeDto> assignments = eventInchargeService.replace(eventId, request);
+        auditService.record("EVENT_INCHARGES_REPLACED", "EVENT", eventId, AuditService.SUCCESS, "Admin replaced event incharge list.");
+        return assignments;
     }
 
     @PatchMapping("/event-incharges/{assignmentId}")
     public EventInchargeDto update(@PathVariable Long assignmentId, @RequestBody UpdateEventInchargeRequest request) {
-        return eventInchargeService.update(assignmentId, request);
+        EventInchargeDto assignment = eventInchargeService.update(assignmentId, request);
+        auditService.record("EVENT_INCHARGE_UPDATED", "EVENT_INCHARGE", assignmentId, AuditService.SUCCESS, "Admin updated event incharge assignment.");
+        return assignment;
     }
 
     @DeleteMapping("/event-incharges/{assignmentId}")
     public void remove(@PathVariable Long assignmentId) {
         eventInchargeService.remove(assignmentId);
+        auditService.record("EVENT_INCHARGE_REMOVED", "EVENT_INCHARGE", assignmentId, AuditService.SUCCESS, "Admin removed event incharge assignment.");
     }
 }

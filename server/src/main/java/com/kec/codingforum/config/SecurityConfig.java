@@ -2,6 +2,7 @@ package com.kec.codingforum.config;
 
 import com.kec.codingforum.security.JwtAuthenticationFilter;
 import com.kec.codingforum.security.ApiRateLimitFilter;
+import com.kec.codingforum.security.RequestSecurityFilter;
 import com.kec.codingforum.security.SecurityHeadersFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +15,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.firewall.HttpFirewall;
+import org.springframework.security.web.firewall.StrictHttpFirewall;
+import org.springframework.web.filter.ForwardedHeaderFilter;
 
 @Configuration
 @EnableMethodSecurity
@@ -24,6 +28,7 @@ public class SecurityConfig {
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             ApiRateLimitFilter apiRateLimitFilter,
+            RequestSecurityFilter requestSecurityFilter,
             SecurityHeadersFilter securityHeadersFilter
     ) throws Exception {
         return http
@@ -42,9 +47,13 @@ public class SecurityConfig {
                                 "/api/public/event-posters/**",
                                 "/ws"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/faculty/**").hasRole("FACULTY")
+                        .requestMatchers("/api/student/**").hasRole("STUDENT")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityHeadersFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(requestSecurityFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(apiRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
@@ -53,5 +62,22 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    HttpFirewall strictHttpFirewall() {
+        StrictHttpFirewall firewall = new StrictHttpFirewall();
+        firewall.setAllowSemicolon(false);
+        firewall.setAllowBackSlash(false);
+        firewall.setAllowUrlEncodedSlash(false);
+        firewall.setAllowUrlEncodedDoubleSlash(false);
+        firewall.setAllowUrlEncodedPercent(false);
+        firewall.setAllowUrlEncodedPeriod(false);
+        return firewall;
+    }
+
+    @Bean
+    ForwardedHeaderFilter forwardedHeaderFilter() {
+        return new ForwardedHeaderFilter();
     }
 }

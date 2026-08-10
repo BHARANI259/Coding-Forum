@@ -1,5 +1,6 @@
 package com.kec.codingforum.common;
 
+import com.kec.codingforum.audit.AuditService;
 import com.kec.codingforum.auth.AuthException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,12 @@ import java.time.Instant;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final AuditService auditService;
+
+    public GlobalExceptionHandler(AuditService auditService) {
+        this.auditService = auditService;
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception, HttpServletRequest request) {
@@ -55,6 +62,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException exception, HttpServletRequest request) {
+        auditService.record("ACCESS_DENIED", "REQUEST", request.getRequestURI(), AuditService.DENIED, "Forbidden API access attempt.");
         return build(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "Access denied", request);
     }
 

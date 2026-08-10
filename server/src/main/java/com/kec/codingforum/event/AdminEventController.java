@@ -1,5 +1,6 @@
 package com.kec.codingforum.event;
 
+import com.kec.codingforum.audit.AuditService;
 import com.kec.codingforum.event.dto.CreateEventRequest;
 import com.kec.codingforum.event.dto.EventDetailDto;
 import com.kec.codingforum.event.dto.EventListItemDto;
@@ -28,9 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminEventController {
 
     private final EventAdminService eventAdminService;
+    private final AuditService auditService;
 
-    public AdminEventController(EventAdminService eventAdminService) {
+    public AdminEventController(EventAdminService eventAdminService, AuditService auditService) {
         this.eventAdminService = eventAdminService;
+        this.auditService = auditService;
     }
 
     @GetMapping
@@ -56,26 +59,36 @@ public class AdminEventController {
 
     @PostMapping
     public EventDetailDto create(@Valid @RequestBody CreateEventRequest request) {
-        return eventAdminService.create(request);
+        EventDetailDto event = eventAdminService.create(request);
+        auditService.record("EVENT_CREATED", "EVENT", event.id(), AuditService.SUCCESS, "Admin created event.");
+        return event;
     }
 
     @PutMapping("/{id}")
     public EventDetailDto update(@PathVariable Long id, @Valid @RequestBody UpdateEventRequest request) {
-        return eventAdminService.update(id, request);
+        EventDetailDto event = eventAdminService.update(id, request);
+        auditService.record("EVENT_UPDATED", "EVENT", id, AuditService.SUCCESS, "Admin updated event.");
+        return event;
     }
 
     @PatchMapping("/{id}/status")
     public EventDetailDto updateStatus(@PathVariable Long id, @Valid @RequestBody UpdateEventStatusRequest request) {
-        return eventAdminService.updateStatus(id, request);
+        EventDetailDto event = eventAdminService.updateStatus(id, request);
+        auditService.record("EVENT_STATUS_UPDATED", "EVENT", id, AuditService.SUCCESS, "Admin updated event status to " + request.status() + ".");
+        return event;
     }
 
     @PatchMapping("/{id}/registration")
     public EventDetailDto updateRegistration(@PathVariable Long id, @RequestBody UpdateRegistrationStatusRequest request) {
-        return eventAdminService.updateRegistration(id, request);
+        EventDetailDto event = eventAdminService.updateRegistration(id, request);
+        auditService.record("EVENT_REGISTRATION_UPDATED", "EVENT", id, AuditService.SUCCESS, "Admin updated event registration setting.");
+        return event;
     }
 
     @DeleteMapping("/{id}")
     public EventDetailDto cancel(@PathVariable Long id) {
-        return eventAdminService.cancel(id);
+        EventDetailDto event = eventAdminService.cancel(id);
+        auditService.record("EVENT_CANCELLED", "EVENT", id, AuditService.SUCCESS, "Admin cancelled event.");
+        return event;
     }
 }

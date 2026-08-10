@@ -2,6 +2,7 @@ package com.kec.codingforum.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -16,6 +17,7 @@ public class CorsConfig implements WebMvcConfigurer {
         this.allowedOrigins = Arrays.stream(allowedOrigin.split(","))
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
+                .peek(this::rejectUnsafeOrigin)
                 .toArray(String[]::new);
     }
 
@@ -24,9 +26,15 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/api/**")
                 .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With")
-                .exposedHeaders("Content-Disposition")
+                .allowedHeaders(HttpHeaders.AUTHORIZATION, HttpHeaders.CONTENT_TYPE, HttpHeaders.ACCEPT, HttpHeaders.ORIGIN, "X-Requested-With")
+                .exposedHeaders(HttpHeaders.CONTENT_DISPOSITION)
                 .allowCredentials(true)
                 .maxAge(3600);
+    }
+
+    private void rejectUnsafeOrigin(String origin) {
+        if ("*".equals(origin)) {
+            throw new IllegalStateException("Wildcard CORS origins are not allowed when credentials are enabled.");
+        }
     }
 }

@@ -5,6 +5,7 @@ import com.kec.codingforum.notification.NotificationService;
 import com.kec.codingforum.registration.RegistrationRepository;
 import com.kec.codingforum.registration.Registration;
 import com.kec.codingforum.result.ResultService;
+import com.kec.codingforum.security.FileSignatureValidator;
 import com.kec.codingforum.team.Team;
 import com.kec.codingforum.team.TeamMemberRepository;
 import com.kec.codingforum.team.TeamRepository;
@@ -211,6 +212,9 @@ public class EventRoundResultService {
         String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
         if (!name.endsWith(".xlsx") && !name.endsWith(".xls")) {
             throw new IllegalArgumentException("Upload an Excel file with .xlsx or .xls extension.");
+        }
+        if (!FileSignatureValidator.hasExpectedSpreadsheetSignature(file, name)) {
+            throw new IllegalArgumentException("Marks import file content must match Excel format.");
         }
         User declaredBy = users.findById(declaredByUserId).orElseThrow(() -> new IllegalArgumentException("Declaring user not found."));
         List<ImportedMarkRow> importedRows = readMarkRows(file);
