@@ -14,7 +14,7 @@ class ApiRateLimitFilterTest {
 
     @Test
     void throttlesLoginAfterConfiguredAttempts() throws ServletException, IOException {
-        ApiRateLimitFilter filter = new ApiRateLimitFilter(true, 2, 60, 5, 300);
+        ApiRateLimitFilter filter = new ApiRateLimitFilter(true, 2, 60L, 5, 300L, 20, 600L, 30, 600L, 120, 60L, 10, 600L);
 
         MockHttpServletResponse first = run(filter, "/api/auth/student/login");
         MockHttpServletResponse second = run(filter, "/api/auth/student/login");
@@ -29,7 +29,7 @@ class ApiRateLimitFilterTest {
 
     @Test
     void ignoresUnprotectedPostEndpoints() throws ServletException, IOException {
-        ApiRateLimitFilter filter = new ApiRateLimitFilter(true, 1, 60, 1, 300);
+        ApiRateLimitFilter filter = new ApiRateLimitFilter(true, 1, 60L, 1, 300L, 20, 600L, 30, 600L, 120, 60L, 10, 600L);
 
         MockHttpServletResponse first = run(filter, "/api/student/events/1/register");
         MockHttpServletResponse second = run(filter, "/api/student/events/1/register");
