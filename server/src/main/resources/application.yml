@@ -14,7 +14,7 @@ spring:
   jackson:
     time-zone: ${APP_TIME_ZONE:Asia/Kolkata}
   flyway:
-    enabled: true
+    enabled: ${FLYWAY_ENABLED:false}
   servlet:
     multipart:
       max-file-size: 10MB
