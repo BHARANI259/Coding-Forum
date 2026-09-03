@@ -29,7 +29,9 @@ spring:
   jackson:
     time-zone: ${APP_TIME_ZONE:Asia/Kolkata}
   flyway:
-    enabled: ${FLYWAY_ENABLED:false}
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
+    baseline-version: ${FLYWAY_BASELINE_VERSION:27}
   servlet:
     multipart:
       max-file-size: 10MB
